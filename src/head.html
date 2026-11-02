@@ -340,6 +340,10 @@ code { font-size: .86em; background: var(--bg); border-radius: 4px; padding: 0 4
 .cuform input { width: 100%; }
 .star { color: var(--shu); font-size: 1.2em; padding: 0 6px; }
 .slot { color: var(--muted); letter-spacing: -.1em; }
+.skgrid td, .skgrid th { text-align: center; padding: 6px 8px; }
+.skgrid td.weak { color: var(--bad); background: var(--bad-soft); font-weight: 600; }
+.skgrid td.full { color: var(--good); }
+.plan { display: flex; flex-direction: column; gap: 6px; background: var(--bg); border-radius: 8px; padding: 10px 12px; font-size: .92rem; }
 .foot { font-size: .78rem; text-align: center; }
 
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--paper); padding: 9px 16px; border-radius: 8px; font-size: .9rem; z-index: 40; max-width: calc(100% - 32px); box-shadow: var(--shadow); }

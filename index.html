@@ -346,6 +346,10 @@ code { font-size: .86em; background: var(--bg); border-radius: 4px; padding: 0 4
 .cuform input { width: 100%; }
 .star { color: var(--shu); font-size: 1.2em; padding: 0 6px; }
 .slot { color: var(--muted); letter-spacing: -.1em; }
+.skgrid td, .skgrid th { text-align: center; padding: 6px 8px; }
+.skgrid td.weak { color: var(--bad); background: var(--bad-soft); font-weight: 600; }
+.skgrid td.full { color: var(--good); }
+.plan { display: flex; flex-direction: column; gap: 6px; background: var(--bg); border-radius: 8px; padding: 10px 12px; font-size: .92rem; }
 .foot { font-size: .78rem; text-align: center; }
 
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--paper); padding: 9px 16px; border-radius: 8px; font-size: .9rem; z-index: 40; max-width: calc(100% - 32px); box-shadow: var(--shadow); }
@@ -2659,8 +2663,9 @@ function ptFinish() {
   const passed = lvScores.filter(s => s.p >= PT_PASS);
   const top = passed.length ? passed[passed.length - 1].lv : null;
   const last = lvScores[lvScores.length - 1];
-  const sk = {}; PT.log.forEach(l => { const s = sk[l.sk] || (sk[l.sk] = { ok: 0, n: 0 }); s.n++; if (l.ok) s.ok++; });
-  const res = { d: dayKey(), min: Math.round((Date.now() - PT.t0) / 60000), top, next: last.p < PT_PASS ? last : null, lv: lvScores, sk, voice: PT.voice };
+  const sk = {}, sk2 = {};
+  PT.log.forEach(l => { const s = sk[l.sk] || (sk[l.sk] = { ok: 0, n: 0 }); s.n++; if (l.ok) s.ok++; const b = sk2[l.lv] || (sk2[l.lv] = {}); const t = b[l.sk] || (b[l.sk] = { ok: 0, n: 0 }); t.n++; if (l.ok) t.ok++; });
+  const res = { d: dayKey(), min: Math.round((Date.now() - PT.t0) / 60000), top, next: last.p < PT_PASS ? last : null, lv: lvScores, sk, sk2, voice: PT.voice };
   PT.res = res;
   S.place = S.place || []; S.place.push(res); logAdd('q', PT.log.length); logAdd('c', PT.log.filter(l => l.ok).length); save();
 }
@@ -2671,6 +2676,23 @@ function ptLabel(r) {
   if (r.top === 'N2') return { big: 'N2', sub: 'Đạt cả khối N2 của bài này', stage: 4 };
   const nx = PT_LEVELS[i + 1];
   return { big: r.top, sub: r.next && r.next.p >= 0.4 ? `Đang tiến tới ${nx}` : `Vững ${r.top}`, stage: Math.min(4, i + 1) };
+}
+/* Gợi ý bộ thẻ: giai đoạn kế tiếp + giữ cấp vừa đạt nếu chưa vững (khối < 85% hoặc kỹ năng < 50%) */
+const SOLID = 0.85;
+const LV_SKILL_DECKS = { 'Chữ': { kana: ['hira', 'kata'] }, N5: { kanji: ['kanji5'], vocab: ['kanji5'], grammar: ['g5'] }, N4: { kanji: ['kanji4'], vocab: ['jita'], grammar: ['g4'] }, N3: { kanji: ['v-work', 'v-life'], vocab: ['v-life', 'v-health'], grammar: ['g3'] }, N2: { kanji: ['v-study', 'v-mt'], vocab: ['v-econ', 'fukushi'], grammar: ['g2'] } };
+function ptPlan(r) {
+  const lab = ptLabel(r), next = STAGES[lab.stage].decks.slice(), keep = [], why = [];
+  const topBlock = r.lv.find(b => b.lv === r.top);
+  if (topBlock && lab.stage > 0 && r.top !== 'N2') {
+    const prevDecks = STAGES[lab.stage - 1].decks;
+    if (topBlock.p < SOLID) { keep.push(...prevDecks); why.push(`khối ${r.top} mới ${Math.round(topBlock.p * 100)}% (< 85%)`); }
+    else if (r.sk2 && r.sk2[r.top]) {
+      Object.entries(r.sk2[r.top]).forEach(([k, v]) => { if (v.n && v.ok / v.n < 0.5 && LV_SKILL_DECKS[r.top] && LV_SKILL_DECKS[r.top][k]) { keep.push(...LV_SKILL_DECKS[r.top][k]); why.push(`${PT_SKILLS[k]} ${r.top} ${v.ok}/${v.n}`); } });
+    }
+  }
+  const decks = [...new Set([...(S.set.decks.includes('mine') ? ['mine'] : []), ...keep, ...next])].filter(id => DECK[id]);
+  const newPer = keep.length ? Math.max(S.set.newPer, 15) : S.set.newPer;
+  return { decks, keep: [...new Set(keep)], next, why, newPer, stage: lab.stage };
 }
 function vPlacement() {
   if (PT.done) return vPlacementResult(PT.res);
@@ -2695,7 +2717,9 @@ function vPlacementResult(r) {
   const lab = ptLabel(r);
   const skRows = Object.entries(PT_SKILLS).filter(([k]) => r.sk[k]).map(([k, n]) => { const s = r.sk[k]; const p = s.ok / s.n; return `<div class="skr"><span>${n}</span><span class="sbar"><i style="width:${Math.round(p * 100)}%;${p < 0.5 ? 'background:var(--shu)' : ''}"></i></span><span class="num">${s.ok}/${s.n}</span></div>`; }).join('');
   const weak = Object.entries(r.sk).filter(([, s]) => s.n >= 2 && s.ok / s.n < 0.5).map(([k]) => PT_SKILLS[k]);
-  const st = STAGES[lab.stage];
+  const st = STAGES[lab.stage]; const plan = ptPlan(r);
+  const cell = v => v ? `<td class="num ${v.ok / v.n < 0.5 ? 'weak' : v.ok === v.n ? 'full' : ''}">${v.ok}/${v.n}</td>` : '<td class="muted">—</td>';
+  const grid = r.sk2 ? `<div class="tbl"><table class="skgrid"><thead><tr><th>Khối</th>${Object.values(PT_SKILLS).map(n => `<th>${n}</th>`).join('')}</tr></thead><tbody>${r.lv.map(b => `<tr><td><b>${b.lv}</b></td>${Object.keys(PT_SKILLS).map(k => cell(r.sk2[b.lv] && r.sk2[b.lv][k])).join('')}</tr>`).join('')}</tbody></table></div><p class="hint">Ô đỏ: dưới 50%. Ô xanh: đúng hết.</p>` : '<p class="hint">Bài làm trước bản cập nhật này chưa lưu điểm kỹ năng theo từng cấp; làm lại để xem chi tiết.</p>';
   return `<h1 class="pt">Kết quả kiểm tra <span lang="ja">実力診断</span></h1>
   <div class="panel">
     <div class="ptres">
@@ -2706,12 +2730,15 @@ function vPlacementResult(r) {
     <p class="hint">Đạt một khối cần ≥ 65%. Bài dừng ở khối đầu tiên chưa đạt.</p>
   </div>
   <section class="grid2">
-    <div class="panel"><div class="ph"><h2>Theo kỹ năng</h2></div>${skRows}
+    <div class="panel"><div class="ph"><h2>Theo kỹ năng</h2></div>${skRows}${grid}
       ${weak.length ? `<p>Cần ưu tiên: <b>${weak.join(', ')}</b>.</p>` : ''}${r.voice ? '' : '<p class="hint">Phần nghe được hiện bằng chữ vì thiết bị chưa có giọng đọc tiếng Nhật, nên điểm nghe có thể cao hơn thực tế.</p>'}</div>
     <div class="panel"><div class="ph"><h2>Nên học tiếp</h2><span class="tag">giai đoạn ${st.n}</span></div>
       <p>${esc(st.goal)}</p><p class="muted">${st.time} · ${esc(st.out)}</p>
-      <p class="hint">Bấm nút dưới để chọn các bộ thẻ của giai đoạn này làm nguồn thẻ mới (giữ nguyên tiến độ cũ).</p>
-      <div class="row"><button class="btn pri" data-a="ptApply" data-v="${lab.stage}">Áp dụng gợi ý</button><button class="btn" data-a="ptClose">Xong</button></div></div>
+      <div class="plan"><p><b>Học mới:</b> ${plan.next.filter(id => DECK[id]).map(id => DECK[id].name).join(', ')}</p>
+      ${plan.keep.length ? `<p><b>Giữ ôn thêm:</b> ${plan.keep.filter(id => DECK[id]).map(id => DECK[id].name).join(', ')} <span class="muted">(vì ${plan.why.join('; ')})</span></p>` : ''}
+      <p><b>Thẻ mới mỗi ngày:</b> ${plan.newPer}${plan.newPer !== S.set.newPer ? ` <span class="muted">(hiện ${S.set.newPer})</span>` : ''}</p></div>
+      <p class="hint">Áp dụng sẽ thay danh sách bộ thẻ lấy thẻ mới; thẻ đã học và lịch ôn giữ nguyên.</p>
+      <div class="row"><button class="btn pri" data-a="ptApply">Áp dụng gợi ý</button><button class="btn" data-a="ptClose">Xong</button></div></div>
   </section>
   <p class="hint">Đây là bài tự soạn để định hướng (~${r.lv.reduce((a, s) => a + s.n, 0)} câu), không phải điểm JLPT chính thức. Làm lại sau mỗi 1–2 tháng để xem tiến bộ; kết quả được lưu ở mục Thi thử.</p>`;
 }
@@ -2724,7 +2751,7 @@ function placementCard() {
   return `<div class="panel ptcard">
     <div class="ph"><div class="mh"><span class="mj" lang="ja">診断</span><h2>Kiểm tra trình độ</h2></div>${l ? `<span class="tag on">Lần gần nhất: ${l.big} · ${last.d}</span>` : ''}</div>
     <p class="muted">Bài thích ứng 6–60 câu (10–20 phút): đi lần lượt Chữ → N5 → N4 → N3 → N2, đủ 6 kỹ năng gồm cả nghe. Tự dừng ở khối vượt trình độ và gợi ý giai đoạn nên học.</p>
-    <div class="row"><button class="btn pri" data-a="ptStart">${l ? 'Làm lại' : 'Bắt đầu kiểm tra'}</button></div>
+    <div class="row"><button class="btn pri" data-a="ptStart">${l ? 'Làm lại' : 'Bắt đầu kiểm tra'}</button>${l ? '<button class="btn" data-a="ptView">Xem kết quả gần nhất</button>' : ''}</div>
   </div>`;
 }
 Object.assign(ACT, {
@@ -2733,7 +2760,8 @@ Object.assign(ACT, {
   ptNext() { ptNext(); render(); window.scrollTo(0, 0); },
   ptPlay() { const q = ptCur(); if (q) speak(q.q); },
   ptClose() { PT = null; render(); },
-  ptApply(t) { const st = STAGES[+t.dataset.v]; S.set.decks = [...st.decks]; save(); toast('Đã chọn bộ thẻ giai đoạn ' + st.n); PT = null; go('review'); },
+  ptApply() { const r = PT.res; const plan = ptPlan(r); S.set.decks = plan.decks; S.set.newPer = plan.newPer; save(); toast(`Đã áp dụng: ${plan.decks.length} bộ thẻ, ${plan.newPer} thẻ mới/ngày`); PT = null; go('review'); },
+  ptView() { const last = (S.place || []).slice(-1)[0]; if (!last) return; PT = { done: true, res: last }; if (route !== 'practice') go('practice'); else render(); window.scrollTo(0, 0); },
 });
 document.addEventListener('keydown', e => {
   if (!PT || PT.done || route !== 'practice' || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
