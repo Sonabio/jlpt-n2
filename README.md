@@ -2,7 +2,7 @@
 
 App học và ôn thi tiếng Nhật từ con số 0 đến JLPT N2, chạy như PWA trên điện thoại và máy tính.
 
-**Mở app:** https://sonabio.github.io/jlpt-n2/
+**Mở app:** https://jlpt-n2.mylifegame-platform.workers.dev/ (Cloudflare, tự deploy mỗi lần push lên `main`)
 
 ## Tính năng
 - **Hôm nay:** đếm ngược kỳ thi, thẻ đến hạn, lịch hôm nay, buổi học 60′ có hẹn giờ, chuỗi ngày học, tiến độ lộ trình.
