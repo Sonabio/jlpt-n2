@@ -49,7 +49,7 @@ const CARD = {}; DECKS.forEach(d => d.cards.forEach(c => CARD[c.k] = c));
 
 /* ===== STATE + SYNC ===== */
 const LSK = 'jlpt-n2-son-v1';
-const DEF = () => ({ v: 1, upd: 0, srs: {}, log: {}, nw: { d: 0, c: 0 }, set: { newPer: 10, decks: ['hira', 'kata', 'kanji5', 'g5'], target: '', rev: false }, exams: [], week: {}, chk: {}, qs: {} });
+const DEF = () => ({ v: 1, upd: 0, srs: {}, log: {}, nw: { d: 0, c: 0 }, set: { newPer: 10, decks: ['hira', 'kata', 'kanji5', 'g5'], target: '', rev: false }, exams: [], week: {}, chk: {}, qs: {}, place: [], custom: [] });
 let S = DEF();
 function merge(o) { const d = DEF(); return { ...d, ...o, set: { ...d.set, ...(o.set || {}) } }; }
 try { const raw = localStorage.getItem(LSK); if (raw) S = merge(JSON.parse(raw)); } catch (e) { }
@@ -318,6 +318,7 @@ function vToday() {
     </div>` : ''}
   </header>
 
+  ${(S.place || []).length ? '' : `<div class="panel ptnudge"><div><b>Chưa biết mình đang ở đâu?</b> <span class="muted">Làm bài kiểm tra trình độ 10–20 phút để app chọn giai đoạn và bộ thẻ phù hợp.</span></div><button class="btn pri" data-a="ptStart">Kiểm tra trình độ</button></div>`}
   <section class="grid2">
     <div class="panel">
       <div class="ph"><h2>Ôn thẻ hôm nay</h2><span class="tag">SM-2</span></div>
@@ -519,9 +520,12 @@ function genQuiz(mode) {
 }
 function startQuiz(mode) { QZ = { mode, qs: genQuiz(mode), i: 0, pick: null, ok: 0, wrong: [] }; render(); }
 function vPractice() {
+  if (typeof PT !== 'undefined' && PT) return vPlacement();
   if (QZ) return vQuiz();
   const lvSel = `<div class="seg" role="group" aria-label="Cấp">${['N5', 'N4', 'N3', 'N2'].map(l => `<button class="${PR.lv === l ? 'on' : ''}" data-a="prLv" data-v="${l}">${l}</button>`).join('')}</div>`;
   return `<h1 class="pt">Luyện tập <span lang="ja">練習</span></h1>
+  ${placementCard()}
+  <h2 class="sh">Luyện theo dạng</h2>
   <p class="muted">Mỗi lượt 10 câu, có giải thích ngay sau khi chọn. Kết quả tính vào chuỗi ngày học.</p>
   <div class="modes">${PMODES.map(m => { const st = S.qs[m.id]; return `<div class="mode">
     <div class="mh"><span class="mj" lang="ja">${m.ja}</span><h3>${m.t}</h3></div>
@@ -713,6 +717,7 @@ function vExam() {
     ${hist.length ? examChart(hist) + `<div class="tbl"><table><thead><tr><th>Ngày</th><th>Cấp</th><th>Điểm từng phần</th><th>Tổng</th><th>Kết quả</th><th></th></tr></thead><tbody>${hist.map(h => { const j = judge(h.lv, h.s); return `<tr><td class="num">${h.d}</td><td>${h.lv}</td><td class="num">${h.s.join(' / ')}</td><td class="num"><b>${j.total}</b></td><td>${j.ok ? '<span class="pill good">Đỗ</span>' : `<span class="pill bad">Trượt</span>${j.fails.length ? ' <small>liệt: ' + j.fails.join(', ') + '</small>' : ''}`}</td><td>${EX.del === h.id ? `<button class="btn sm danger" data-a="exDelYes" data-v="${h.id}">Xóa?</button>` : `<button class="btn ghost sm" data-a="exDel" data-v="${h.id}" aria-label="Xóa">Xóa</button>`}</td></tr>`; }).join('')}</tbody></table></div>`
       : '<p class="muted">Chưa có đề nào. Từ giai đoạn N2, làm 1 đề thi thử mỗi 2 tuần, bấm giờ đủ 105 + 50 phút, rồi nhập điểm ở đây.</p>'}
   </section>
+  ${(S.place || []).length ? `<section class="panel"><div class="ph"><h2>Lịch sử kiểm tra trình độ</h2><button class="btn sm" data-a="ptStart">Làm lại</button></div>${ptHistoryHTML()}</section>` : ''}
   <section class="grid2">
     <details class="panel" open><summary><h2>Cấu trúc N2: Kiến thức + Đọc (105′)</h2></summary>${table(['問題', 'Dạng', 'Làm gì', 'Số câu'], EXAM_PARTS, [1])}</details>
     <details class="panel" open><summary><h2>Nghe hiểu (50′)</h2></summary>${table(['問題', 'Dạng', 'Mẹo', 'Số câu'], LISTEN_PARTS, [1])}
@@ -913,5 +918,3 @@ document.addEventListener('keydown', e => {
   }
 });
 
-/* ===== BOOT ===== */
-readHash(); render(); initSync();

@@ -15,9 +15,9 @@ BODY_PART=$(sed -n '/<div class="app">/,$p' src/head.html)
   echo '</head><body>'
   echo "$BODY_PART"
   echo '<script>'; cat src/data.js; echo '</script>'
-  echo '<script>'; cat src/app.js; echo '</script>'
+  echo '<script>'; cat src/app.js src/placement.js src/boot.js; echo '</script>'
   echo "<script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}</script>"
   echo '</body></html>'
 } > index.html
-{ cat src/head.html; echo '<script>'; cat src/data.js; echo '</script>'; echo '<script>'; cat src/app.js; echo '</script>'; } > artifact.html
+{ cat src/head.html; echo '<script>'; cat src/data.js; echo '</script>'; echo '<script>'; cat src/app.js src/placement.js src/boot.js; echo '</script>'; } > artifact.html
 echo "Built index.html ($(wc -c < index.html) bytes), artifact.html"

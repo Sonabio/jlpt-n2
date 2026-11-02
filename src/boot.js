@@ -1,0 +1,2 @@
+/* ===== BOOT ===== */
+readHash(); render(); initSync();
