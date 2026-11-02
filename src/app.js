@@ -14,10 +14,10 @@ const unbr = s => s.replace(/[\[\]]/g, '');
 const brHi = s => esc(s).replace(/\[(.+?)\]/g, '<mark>$1</mark>');
 const isoWeek = (d = new Date()) => { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day); const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1)); return `${t.getUTCFullYear()}-W${pad(Math.ceil(((t - y0) / 864e5 + 1) / 7))}`; };
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 2600); }
-function speak(text) {
+function speak(text, rate = 0.9) {
   try {
     const u = new SpeechSynthesisUtterance(String(text).replace(/[\[\]～〜()（）]/g, ' '));
-    u.lang = 'ja-JP'; u.rate = 0.9; speechSynthesis.cancel(); speechSynthesis.speak(u);
+    u.lang = 'ja-JP'; u.rate = rate; try { const v = speechSynthesis.getVoices().find(x => /^ja/i.test(x.lang)); if (v) u.voice = v; } catch (e) { } speechSynthesis.cancel(); speechSynthesis.speak(u);
   } catch (e) { toast('Thiết bị này chưa đọc được tiếng Nhật'); }
 }
 async function copyText(text) {
@@ -33,6 +33,7 @@ deck('kata', 'Katakana', 'Chữ', KANA.map(([h, r]) => ({ f: toKata(h), m: r }))
 deck('kanji5', 'Kanji N5', 'N5', KANJI5.map(([c, hv, on, kun, m, ex]) => ({ f: c, hv, r: `On ${on} · Kun ${kun}`, m, x: ex, say: ex.split(' ')[0] })));
 deck('radical', 'Bộ thủ', 'N5', RADICALS.map(([b, hv, m, ex]) => ({ f: b, hv, m, x: 'Ví dụ: ' + ex })));
 deck('g5', 'Ngữ pháp N5', 'N5', G5.map(([p, m, x]) => ({ f: p, m, x: unbr(x) })), true);
+deck('kanji4', 'Kanji N4', 'N4', KANJI4.map(([c, hv, on, kun, m, ex]) => ({ f: c, hv, r: `On ${on} · Kun ${kun}`, m, x: ex, say: ex.split(' ')[0] })));
 deck('g4', 'Ngữ pháp N4', 'N4', G4.map(([p, m, x]) => ({ f: p, m, x: unbr(x) })), true);
 deck('jita', 'Tự / tha động từ', 'N4', JITA.map(([a, b, m]) => ({ f: '自 ' + a, m: 'Tha (を): ' + b, n: m, say: a })), true);
 deck('g3', 'Ngữ pháp N3', 'N3', G3.map(([p, m, x]) => ({ f: p, m, x: unbr(x) })), true);
@@ -44,8 +45,17 @@ deck('fukushi', 'Phó từ N2', 'N2', FUKUSHI.map(([a, m, x]) => ({ f: a, m, x }
 deck('gokei', 'Tiền tố / hậu tố', 'N2', GOKEI.map(([a, m, x]) => ({ f: a, m, x: 'Ví dụ: ' + x })), true);
 deck('nise', 'Bạn giả Hán-Việt', 'N2', NISE.map(([w, r, hv, m]) => ({ f: w, r, hv, m, n: 'Nghĩa khác tiếng Việt' })));
 deck('senmon', 'Từ ngành môi trường', 'N3', SENMON.map(([w, r, hv, m]) => ({ f: w, r, hv, m })));
+Object.entries(VOCAB_TOPICS).forEach(([id, name]) => deck('v-' + id, 'Từ vựng: ' + name, id === 'econ' || id === 'mt' || id === 'study' ? 'N2' : 'N3', VOCAB.filter(v => v[1] === id).map(([lv, t, w, r, hv, m, x]) => ({ f: w, r, hv: hv === '—' ? '' : hv, m, x, n: lv, say: x }))));
 const DECK = Object.fromEntries(DECKS.map(d => [d.id, d]));
 const CARD = {}; DECKS.forEach(d => d.cards.forEach(c => CARD[c.k] = c));
+/* Thẻ của mình (S.custom), khóa thẻ theo id nên thêm/xóa không làm lệch tiến độ */
+function buildCustom() {
+  let d = DECK.mine;
+  if (!d) { d = { id: 'mine', name: 'Thẻ của mình', lv: 'Mình', small: false, cards: [] }; DECKS.unshift(d); DECK.mine = d; }
+  d.cards.forEach(c => delete CARD[c.k]);
+  d.cards = (S.custom || []).map(c => ({ f: c.f, r: c.r, m: c.m, x: c.x, k: 'mine:' + c.id, d: 'mine', small: [...c.f].length > 5 }));
+  d.cards.forEach(c => CARD[c.k] = c);
+}
 
 /* ===== STATE + SYNC ===== */
 const LSK = 'jlpt-n2-son-v1';
@@ -76,7 +86,7 @@ function setSync(mode, msg) { SY.mode = mode; SY.msg = msg; document.querySelect
 function adoptRemote(data) {
   if (!data || typeof data.s !== 'string') return false;
   if ((data.upd || 0) <= (S.upd || 0)) return false;
-  try { S = merge(JSON.parse(data.s)); localStorage.setItem(LSK, JSON.stringify(S)); return true; } catch (e) { return false; }
+  try { S = merge(JSON.parse(data.s)); localStorage.setItem(LSK, JSON.stringify(S)); buildCustom(); return true; } catch (e) { return false; }
 }
 function rerenderAfterRemote() { if (!(route === 'review' && RV && !RV.done)) render(); else RV.remoteNote = true; }
 async function initSync() {
@@ -167,21 +177,30 @@ const GIST = {
 const today = () => dayNum();
 function logAdd(field, n = 1) { const k = dayKey(); const l = S.log[k] || (S.log[k] = { r: 0, q: 0, c: 0, m: 0 }); l[field] = (l[field] || 0) + n; }
 function newLeft() { const d = today(); return Math.max(0, S.set.newPer - (S.nw.d === d ? S.nw.c : 0)); }
+/* FSRS-4.5 (tham số mặc định), độ chính xác theo ngày. Trạng thái: [due, ivl, D, S, reps, lapses, lastReview].
+   Thẻ cũ dạng SM-2 [due, ivl, ease, reps, lapses] được chuyển đổi khi ôn lần kế tiếp. */
+const FW = [0.4872, 1.4003, 3.7145, 13.8206, 5.1618, 1.2298, 0.8975, 0.031, 1.6474, 0.1367, 1.0461, 2.1072, 0.0793, 0.3246, 1.587, 0.2272, 2.8755];
+const F_DECAY = -0.5, F_FACTOR = 19 / 81;
+const clampD = d => Math.min(10, Math.max(1, d));
+const fD0 = g => clampD(FW[4] - (g - 3) * FW[5]);
+function fIvl(st) { const r = S.set.ret || 0.9; return Math.max(1, Math.min(3650, Math.round(st / F_FACTOR * (Math.pow(r, 1 / F_DECAY) - 1)))); }
 function sched(st, g) {
   const dn = today();
-  let [, ivl, ease, reps, lap] = st || [dn, 0, 2.5, 0, 0];
-  if (ivl === 0) {
-    if (g === 1) return { st: [dn, 0, ease, reps, lap], again: true };
-    if (g === 2) ease = Math.max(1.3, ease - 0.15);
-    ivl = g === 4 ? 4 : 1;
-  } else {
-    if (g === 1) return { st: [dn, 0, Math.max(1.3, ease - 0.2), reps, lap + 1], again: true };
-    if (g === 2) { ivl = Math.max(ivl + 1, Math.round(ivl * 1.2)); ease = Math.max(1.3, ease - 0.15); }
-    else if (g === 3) ivl = Math.max(ivl + 1, Math.round(ivl * ease));
-    else { ivl = Math.max(ivl + 2, Math.round(ivl * ease * 1.3)); ease += 0.15; }
+  let D, Sx, reps = 0, lap = 0, last = dn, fresh = !st;
+  if (st && st.length === 5) { const [due, ivl, ease, r, l] = st; Sx = Math.max(ivl, 0.5); D = clampD(11 - (ease - 1.3) / 1.5 * 9); reps = r; lap = l; last = due - ivl; }
+  else if (st) { D = st[2]; Sx = st[3]; reps = st[4]; lap = st[5]; last = st[6]; }
+  let nD, nS;
+  if (fresh) { nS = FW[g - 1]; nD = fD0(g); }
+  else {
+    const t = Math.max(0, dn - last), R = Math.pow(1 + F_FACTOR * t / Sx, F_DECAY);
+    nD = clampD(FW[7] * fD0(3) + (1 - FW[7]) * (D - FW[6] * (g - 3)));
+    if (g === 1) { nS = Math.min(Sx, FW[11] * Math.pow(D, -FW[12]) * (Math.pow(Sx + 1, FW[13]) - 1) * Math.exp(FW[14] * (1 - R))); lap++; }
+    else nS = Sx * (Math.exp(FW[8]) * (11 - D) * Math.pow(Sx, -FW[9]) * (Math.exp(FW[10] * (1 - R)) - 1) * (g === 2 ? FW[15] : 1) * (g === 4 ? FW[16] : 1) + 1);
   }
-  ivl = Math.min(ivl, 3650);
-  return { st: [dn + ivl, ivl, +ease.toFixed(2), reps + 1, lap], again: false };
+  nS = Math.max(0.1, nS); nD = +nD.toFixed(3); nS = +nS.toFixed(4);
+  if (g === 1) return { st: [dn, 0, nD, nS, reps, lap, dn], again: true };
+  const ivl = fIvl(nS);
+  return { st: [dn + ivl, ivl, nD, nS, reps + 1, lap, dn], again: false };
 }
 const ivlLabel = n => n <= 0 ? '<10 phút' : n === 1 ? '1 ngày' : n < 31 ? n + ' ngày' : n < 365 ? Math.round(n / 30) + ' tháng' : (n / 365).toFixed(1) + ' năm';
 function deckStats(d) {
@@ -321,7 +340,7 @@ function vToday() {
   ${(S.place || []).length ? '' : `<div class="panel ptnudge"><div><b>Chưa biết mình đang ở đâu?</b> <span class="muted">Làm bài kiểm tra trình độ 10–20 phút để app chọn giai đoạn và bộ thẻ phù hợp.</span></div><button class="btn pri" data-a="ptStart">Kiểm tra trình độ</button></div>`}
   <section class="grid2">
     <div class="panel">
-      <div class="ph"><h2>Ôn thẻ hôm nay</h2><span class="tag">SM-2</span></div>
+      <div class="ph"><h2>Ôn thẻ hôm nay</h2><span class="tag">FSRS · nhớ ${Math.round((S.set.ret || 0.9) * 100)}%</span></div>
       <div class="kpis">
         <div><b class="num">${due}</b><span>đến hạn</span></div>
         <div><b class="num">${nw}</b><span>thẻ mới</span></div>
@@ -385,7 +404,7 @@ function startReview(only) {
 function cardFront(c) {
   const d = DECK[c.d];
   if (S.set.rev && c.d !== 'hira' && c.d !== 'kata') return `<div class="cf vi">${esc(c.m)}${c.n && c.d !== 'g2' ? `<small>${esc(c.n)}</small>` : ''}</div>`;
-  return `<div class="cf${d.small ? ' small' : ''}" lang="ja">${esc(c.f)}</div>`;
+  return `<div class="cf${d.small || c.small ? ' small' : ''}" lang="ja">${esc(c.f)}</div>`;
 }
 function cardBack(c) {
   const rows = [];
@@ -406,6 +425,7 @@ function vReview() {
       <div class="row"><button class="btn pri" data-a="startReview" ${due + nw ? '' : 'disabled'}>Ôn tất cả (${due + nw})</button>
       <label class="check"><input type="checkbox" id="rev-toggle" data-a="toggleRev" ${S.set.rev ? 'checked' : ''}><span>Đảo chiều: nhìn nghĩa tiếng Việt, nhớ tiếng Nhật</span></label></div>
     </div>
+    ${customPanel()}
     <h2 class="sh">Các bộ thẻ</h2>
     <div class="decks">${DECKS.map(d => { const s = deckStats(d); const on = S.set.decks.includes(d.id); return `<div class="dk">
       <div class="dk-h"><span class="lv">${d.lv}</span><b>${esc(d.name)}</b>${on ? '<span class="tag on">đang học</span>' : ''}</div>
@@ -462,6 +482,10 @@ const PMODES = [
   { id: 'joshi', t: 'Trợ từ', ja: '助詞', d: 'は/が, に/で, まで/までに, しか/だけ…' },
   { id: 'keigo', t: 'Kính ngữ', ja: '敬語', d: 'Chọn 尊敬語 hoặc 謙譲語 đúng.' },
   { id: 'jita', t: 'Tự / tha động từ', ja: '自他', d: 'Cho một vế, chọn vế còn lại.' },
+  { id: 'yomi', t: 'Đọc kanji', ja: '問題1', d: 'Chọn cách đọc đúng của từ Hán, có bẫy trường âm, っ, âm đục.', lv: true },
+  { id: 'gokei', t: 'Tiền tố / hậu tố', ja: '問題3', d: 'Điền 不・無・未・化・性… vào chỗ trống.' },
+  { id: 'narabe', t: 'Sắp xếp câu ★', ja: '問題8', d: 'Xếp 4 mảnh, chọn mảnh ở vị trí ★.', lv: true },
+  { id: 'shadow', t: 'Nghe & shadowing', ja: '聴解', d: 'Nghe câu ví dụ (bình thường / chậm), nhại theo, rồi mới hiện chữ.', lv: true },
   { id: 'deck', t: 'Trắc nghiệm theo bộ thẻ', ja: '単語', d: 'Kana, kanji, phó từ, bạn giả Hán-Việt…', deck: true },
 ];
 let PR = { lv: 'N5', deck: 'hira', forms: ['masu', 'nai', 'te', 'ta'] };
@@ -509,6 +533,22 @@ function genQuiz(mode) {
       const { opts, ans: a } = mkOpts(ans, JITA.map(x => x[1 - t]));
       qs.push({ q: `<p class="qs big" lang="ja">${esc(r[t])}</p><p class="qsub">${esc(r[2])} → chọn ${t === 0 ? 'tha động từ (を)' : 'tự động từ (が)'}</p>`, opts, ans: a, jp: true, exp: `自 <span lang="ja">${esc(r[0])}</span> ↔ 他 <span lang="ja">${esc(r[1])}</span>` });
     }
+  } else if (mode === 'yomi') {
+    const pool = yomiPool(PR.lv);
+    for (const [w, r] of shuffle(pool).slice(0, N)) {
+      const near = pool.map(x => x[1]).filter(x => x !== r && Math.abs(x.length - r.length) <= 1);
+      const traps = mutateReading(r);
+      const { opts, ans } = mkOpts(r, [...shuffle(traps).slice(0, 2), ...shuffle(near)]);
+      qs.push({ q: `<p class="qsub">Cách đọc của từ gạch chân</p><p class="qs huge" lang="ja"><u>${esc(w)}</u></p>`, opts, ans, jp: true, exp: `<span lang="ja">${esc(w)} → ${esc(r)}</span>`, say: r });
+    }
+  } else if (mode === 'gokei') {
+    const items = gokeiItems();
+    for (const it of shuffle(items).slice(0, N)) {
+      const { opts, ans } = mkOpts(it.a, items.filter(x => x.pre === it.pre).map(x => x.a));
+      qs.push({ q: `<p class="qs big" lang="ja">${esc(it.q)}</p><p class="qsub">${it.pre ? 'Tiền tố' : 'Hậu tố'} phù hợp</p>`, opts, ans, jp: true, exp: `<span lang="ja">${esc(it.w)}</span>: ${esc(it.m)}` , say: it.w });
+    }
+  } else if (mode === 'narabe') {
+    for (const it of shuffle(narabeItems(PR.lv)).slice(0, N)) qs.push(it);
   } else if (mode === 'deck') {
     const d = DECK[PR.deck];
     for (const c of shuffle(d.cards).slice(0, N)) {
@@ -518,9 +558,55 @@ function genQuiz(mode) {
   }
   return qs;
 }
-function startQuiz(mode) { QZ = { mode, qs: genQuiz(mode), i: 0, pick: null, ok: 0, wrong: [] }; render(); }
+function yomiPool(lv) {
+  const out = []; const kj = /[\u4e00-\u9fff]/;
+  const fromEx = rows => rows.forEach(k => k[5].split(' · ').forEach(p => { const [w, r] = p.split(' '); if (w && r && kj.test(w)) out.push([w, r]); }));
+  if (lv === 'N5') fromEx(KANJI5);
+  else if (lv === 'N4') fromEx(KANJI4);
+  else { VOCAB.filter(v => v[0] === lv && kj.test(v[2])).forEach(v => out.push([v[2], v[3]])); if (lv === 'N3') SENMON.forEach(v => out.push([v[0], v[1]])); if (lv === 'N2') NISE.forEach(v => out.push([v[0], v[1]])); }
+  return out.filter((x, i) => out.findIndex(y => y[0] === x[0]) === i);
+}
+function mutateReading(r) {
+  const out = new Set();
+  const DAK = { か: 'が', き: 'ぎ', く: 'ぐ', け: 'げ', こ: 'ご', さ: 'ざ', し: 'じ', す: 'ず', せ: 'ぜ', そ: 'ぞ', た: 'だ', ち: 'ぢ', て: 'で', と: 'ど', は: 'ば', ひ: 'び', ふ: 'ぶ', へ: 'べ', ほ: 'ぼ' };
+  const UN = Object.fromEntries(Object.entries(DAK).map(([a, b]) => [b, a]));
+  const i = r.search(/[ょゅ]う|[おこそとのほもよろごぞどぼ]う/); if (i >= 0) out.add(r.slice(0, i + 1) + r.slice(i + 2));
+  const j = r.search(/[ょゅ][^う]|[こそと][^うっ]/); if (j >= 0 && j < r.length - 1) out.add(r.slice(0, j + 1) + 'う' + r.slice(j + 1));
+  if (r.includes('っ')) out.add(r.replace('っ', '')); else { const k = r.search(/[くきつち][かきくけこさしすせそたちつてとぱぴぷぺぽ]/); if (k >= 0) out.add(r.slice(0, k) + 'っ' + r.slice(k + 1)); }
+  for (let n = 0; n < r.length; n++) { const c = r[n]; if (DAK[c] || UN[c]) { out.add(r.slice(0, n) + (DAK[c] || UN[c]) + r.slice(n + 1)); break; } }
+  out.delete(r); return [...out];
+}
+function gokeiItems() {
+  const items = [];
+  GOKEI.forEach(([pat, m, ex]) => {
+    const affs = pat.split('/').map(x => x.trim()); const pre = !pat.trim().startsWith('〜');
+    ex.split(',').map(x => x.trim()).forEach(w => {
+      for (const a of affs) { const af = a.replace(/〜/g, ''); if (pre ? w.startsWith(af) : w.endsWith(af)) { items.push({ w, a: af, pre, m, q: pre ? '（　）' + w.slice(af.length) : w.slice(0, w.length - af.length) + '（　）' }); break; } }
+    });
+  });
+  return items;
+}
+function narabeItems(lv) {
+  const out = [];
+  GRAMMAR.filter(g => g.lv === lv && /\[.+\]/.test(g.x)).forEach(g => {
+    const m = g.x.match(/^(.*?)\[(.+?)\](.*)$/); if (!m) return;
+    const end = m[3].match(/[。?？]$/) ? m[3].slice(-1) : ''; const after = end ? m[3].slice(0, -1) : m[3];
+    const cut = t => t ? t.split(/(?<=[はがをにでともへ、])/).filter(Boolean) : [];
+    const segs = [...cut(m[1]), m[2], ...cut(after)]; const mi = cut(m[1]).length;
+    if (segs.length < 5) return;
+    let st = Math.max(0, Math.min(mi - 1, segs.length - 4)); if (st === 0 && segs.length > 4 && mi >= 1) st = Math.min(1, segs.length - 4);
+    const pieces = segs.slice(st, st + 4); if (new Set(pieces).size < 4 || pieces.some(p => p.length < 1)) return;
+    const pre = segs.slice(0, st).join(''), post = segs.slice(st + 4).join('') + end;
+    const star = Math.floor(Math.random() * 4); const opts = shuffle(pieces); const ans = opts.indexOf(pieces[star]);
+    const slots = [0, 1, 2, 3].map(i => i === star ? '<b class="star">★</b>' : '<span class="slot">＿＿</span>').join(' ');
+    out.push({ q: `<p class="qs" lang="ja">${esc(pre)} ${slots} ${esc(post)}</p>`, opts, ans, jp: true, exp: `Câu đúng: <span lang="ja">${brHi(g.x)}</span><br>Mẫu <b lang="ja">${esc(g.p)}</b>: ${esc(g.m)}`, say: unbr(g.x) });
+  });
+  return out;
+}
+function startQuiz(mode) { if (mode === 'shadow') { startShadow(); return; } QZ = { mode, qs: genQuiz(mode), i: 0, pick: null, ok: 0, wrong: [] }; render(); }
 function vPractice() {
   if (typeof PT !== 'undefined' && PT) return vPlacement();
+  if (SH) return vShadow();
   if (QZ) return vQuiz();
   const lvSel = `<div class="seg" role="group" aria-label="Cấp">${['N5', 'N4', 'N3', 'N2'].map(l => `<button class="${PR.lv === l ? 'on' : ''}" data-a="prLv" data-v="${l}">${l}</button>`).join('')}</div>`;
   return `<h1 class="pt">Luyện tập <span lang="ja">練習</span></h1>
@@ -592,10 +678,12 @@ function lkBody() {
       <h2 class="sh">Bạn giả: từ Hán nghĩa khác tiếng Việt</h2>${table(['Từ', 'Đọc', 'Hán-Việt', 'Nghĩa tiếng Nhật'], NISE, [0, 1])}
       <h2 class="sh">Từ ngành môi trường / xử lý nước</h2>${table(['Từ', 'Đọc', 'Hán-Việt', 'Nghĩa'], SENMON, [0, 1])}`;
     case 'kanji': {
-      const ks = KANJI5.filter(k => match(...k));
+      const ks = KANJI5.filter(k => match(...k)); const k4 = KANJI4.filter(k => match(...k));
       const rs = RADICALS.filter(r => match(...r));
       return `<h2 class="sh">Kanji N5 <span class="muted num">${ks.length}</span></h2>
       <div class="kgrid">${ks.map(([c, hv, on, kun, m, ex]) => `<button class="kc" data-a="say" data-v="${esc(ex.split(' ')[0])}" title="Nghe từ ví dụ"><span class="kch" lang="ja">${c}</span><span class="khv">${hv}</span><span class="km">${esc(m)}</span><span class="kr" lang="ja">${esc(on)} · ${esc(kun)}</span><span class="kx" lang="ja">${esc(ex)}</span></button>`).join('')}</div>
+      <h2 class="sh">Kanji N4 <span class="muted num">${k4.length}</span></h2>
+      <div class="kgrid">${k4.map(([c, hv, on, kun, m, ex]) => `<button class="kc" data-a="say" data-v="${esc(ex.split(' ')[0])}" title="Nghe từ ví dụ"><span class="kch" lang="ja">${c}</span><span class="khv">${hv}</span><span class="km">${esc(m)}</span><span class="kr" lang="ja">${esc(on)} · ${esc(kun)}</span><span class="kx" lang="ja">${esc(ex)}</span></button>`).join('')}</div>
       <h2 class="sh">Bộ thủ quan trọng <span class="muted num">${rs.length}</span></h2>${table(['Bộ', 'Tên', 'Nghĩa gợi ý', 'Ví dụ'], rs, [0, 3])}
       <h2 class="sh">Chữ hay nhầm</h2><p class="pairs" lang="ja">待/持/特 · 未/末 · 土/士 · 責/積/績 · 険/検/験 · 復/複/腹 · 微/徴 · 析/折 · 侍/待</p>`;
     }
@@ -629,7 +717,8 @@ function lkBody() {
 に (bị động, cho/nhận)|người thực hiện|先生にほめられた。/ 友達にもらった。
 で (nguyên nhân, phạm vi)|do, trong|風邪で休んだ。/ クラスで一番
 しか～ない / だけ|しか + phủ định nhấn "chỉ có (ít)"|100円しかない。/ 100円だけある。`).filter(r => match(...r)), [2]);
-    case 'vocab': return `<h2 class="sh">Tự / tha động từ</h2><p class="hint">Cặp -aru / -eru: -aru là tự. Cặp có -su: -su là tha.</p>${table(['Tự (が)', 'Tha (を)', 'Nghĩa'], JITA.filter(r => match(...r)), [0, 1])}
+    case 'vocab': return `${Object.entries(VOCAB_TOPICS).map(([id, name]) => { const rows = VOCAB.filter(v => v[1] === id && match(...v)).map(v => [v[2], v[3], v[4], v[5], v[0], v[6]]); return rows.length ? `<h2 class="sh">${esc(name)} <span class="muted num">${rows.length}</span></h2>${table(['Từ', 'Đọc', 'Hán-Việt', 'Nghĩa', 'Cấp', 'Ví dụ'], rows, [0, 1, 5])}` : ''; }).join('')}
+      <h2 class="sh">Tự / tha động từ</h2><p class="hint">Cặp -aru / -eru: -aru là tự. Cặp có -su: -su là tha.</p>${table(['Tự (が)', 'Tha (を)', 'Nghĩa'], JITA.filter(r => match(...r)), [0, 1])}
       <h2 class="sh">Phó từ N2</h2>${table(['Từ', 'Nghĩa', 'Ví dụ'], FUKUSHI.filter(r => match(...r)), [0, 2])}
       <h2 class="sh">Động từ ghép (Vます + …)</h2>${table(['Hậu tố', 'Nghĩa', 'Ví dụ'], FUKUGO.filter(r => match(...r)), [0, 2])}
       <h2 class="sh">Tiền tố / hậu tố (問題3)</h2>${table(['Phụ tố', 'Nghĩa', 'Ví dụ'], GOKEI.filter(r => match(...r)), [0, 2])}
@@ -778,6 +867,8 @@ function vPlan() {
     </div>
   </section>
 
+  ${reminderPanel()}
+
   <section class="panel" id="ask">
     <div class="ph"><h2>Hỏi Claude</h2><span class="tag">dán vào project tiếng Nhật</span></div>
     <div class="chips">${PROMPTS.map((x, i) => `<button class="chip${PL.pr === i ? ' on' : ''}" data-a="prPick" data-v="${i}">${esc(x.t)}</button>`).join('')}</div>
@@ -801,7 +892,9 @@ function vPlan() {
     <fieldset class="fs"><legend>Bộ thẻ lấy thẻ mới</legend>
       <div class="deckpick">${DECKS.map(d => `<label class="check"><input type="checkbox" id="dk-${d.id}" data-a="deckTog" data-v="${d.id}" ${S.set.decks.includes(d.id) ? 'checked' : ''}><span><span class="lv">${d.lv}</span> ${esc(d.name)} <small class="muted num">${d.cards.length}</small></span></label>`).join('')}</div>
     </fieldset>
-    <p class="hint">Lịch ôn dùng thuật toán SM-2 rút gọn (không phải FSRS): bấm Lại / Khó / Được / Dễ, khoảng ôn tăng dần.</p>
+    <label class="fld" for="set-ret">Mức nhớ mục tiêu (FSRS)
+      <select id="set-ret" data-a="setRet">${[[0.85, '85% · ít lượt ôn hơn'], [0.9, '90% · khuyên dùng'], [0.95, '95% · ôn nhiều hơn']].map(([v, t]) => `<option value="${v}" ${(S.set.ret || 0.9) === v ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+    <p class="hint">Lịch ôn dùng FSRS-4.5 với tham số mặc định. Thẻ học từ trước được chuyển sang FSRS ở lần ôn kế tiếp, không mất tiến độ.</p>
     <div class="row wrap">
       <button class="btn" data-a="exportData">Xuất tiến độ</button>
       <button class="btn" data-a="importShow">Nhập tiến độ</button>
@@ -821,8 +914,93 @@ function gistUI() {
     <div class="row"><input id="gist-token" type="password" placeholder="ghp_… hoặc github_pat_…" autocomplete="off" style="flex:1;min-width:0"><button class="btn pri" data-a="gistOn">Kết nối</button></div></div>`;
 }
 
+/* ----- Nghe & shadowing ----- */
+let SH = null;
+function startShadow() { const list = shuffle(GRAMMAR.filter(g => g.lv === PR.lv)).slice(0, 15); SH = { list, i: 0, show: false, n: 0 }; render(); }
+function vShadow() {
+  if (SH.i >= SH.list.length) return `<div class="panel center"><div class="stamp" lang="ja">聴</div><h2>Xong ${SH.list.length} câu</h2><p class="muted">Mẹo: nhại ngay sau người nói, giữ đúng độ dài âm và nhịp.</p><div class="row center"><button class="btn pri" data-a="shAgain">Lượt mới</button><button class="btn" data-a="shClose">Các dạng khác</button></div></div>`;
+  const g = SH.list[SH.i], t = unbr(g.x);
+  return `<div class="rv-top"><button class="btn ghost sm" data-a="shClose">Thoát</button><span class="muted"><span lang="ja">聴解</span> · Nghe & shadowing ${PR.lv}</span><span class="num muted">${SH.i + 1}/${SH.list.length}</span></div>
+  <div class="rv-prog"><i style="width:${Math.round(SH.i / SH.list.length * 100)}%"></i></div>
+  <div class="qcard">
+    <div class="row center"><button class="btn pri" data-a="shPlay" data-r="0.9">Nghe</button><button class="btn" data-a="shPlay" data-r="0.65">Nghe chậm</button><button class="btn" data-a="shPlay" data-r="1.1">Nhanh</button></div>
+    ${SH.show ? `<p class="qs" lang="ja">${brHi(g.x)}</p><p class="qsub"><b lang="ja">${esc(g.p)}</b>: ${esc(g.m)}</p>` : '<p class="hint">Nghe 2–3 lần, nhại theo thành tiếng, sau đó mới hiện chữ để kiểm tra.</p>'}
+  </div>
+  <div class="row">${SH.show ? '' : '<button class="btn" data-a="shShow">Hiện chữ</button>'}<button class="btn pri" data-a="shNext">Câu tiếp</button></div>
+  ${typeof hasJaVoice === 'function' && !hasJaVoice() ? '<p class="hint">Thiết bị chưa có giọng đọc tiếng Nhật. Trên điện thoại: cài giọng Nhật trong phần Cài đặt → Trợ năng → Nội dung đọc.</p>' : ''}`;
+}
+
+/* ----- Thẻ của mình ----- */
+function customPanel() {
+  const list = S.custom || [];
+  return `<details class="panel" ${list.length ? '' : 'open'} id="mine"><summary><h2>Thẻ của mình <span class="muted num">${list.length}</span></h2></summary>
+    <p class="hint">Ghi từ gặp ngoài đời (biển báo, siêu thị, lab) hoặc dán CSV do Claude tạo. Thẻ mới tự vào bộ "Thẻ của mình".</p>
+    <div class="cuform">
+      <label class="fld" for="cu-f">Tiếng Nhật<input id="cu-f" placeholder="例: 浄水場" autocomplete="off"></label>
+      <label class="fld" for="cu-r">Cách đọc<input id="cu-r" placeholder="じょうすいじょう" autocomplete="off"></label>
+      <label class="fld" for="cu-m">Nghĩa / Hán-Việt<input id="cu-m" placeholder="nhà máy lọc nước (tịnh thủy trường)" autocomplete="off"></label>
+      <label class="fld" for="cu-x">Câu ví dụ (không bắt buộc)<input id="cu-x" autocomplete="off"></label>
+    </div>
+    <div class="row"><button class="btn pri" data-a="cuAdd">Thêm thẻ</button></div>
+    <label class="fld" for="cu-csv">Nhập nhiều thẻ (CSV: mỗi dòng <code>tiếng Nhật;nghĩa</code> hoặc <code>tiếng Nhật;cách đọc;nghĩa;ví dụ</code>)<textarea id="cu-csv" rows="4" placeholder="浄水場;じょうすいじょう;nhà máy lọc nước;浄水場を見学した。"></textarea></label>
+    <div class="row"><button class="btn" data-a="cuImport">Nhập CSV</button><span class="hint">Dấu phân cách: ; hoặc Tab hoặc ,</span></div>
+    ${list.length ? `<div class="tbl"><table><thead><tr><th>Thẻ</th><th>Đọc</th><th>Nghĩa</th><th></th></tr></thead><tbody>${list.slice().reverse().map(c => `<tr><td lang="ja">${esc(c.f)}</td><td lang="ja">${esc(c.r || '')}</td><td>${esc(c.m)}</td><td>${CU_DEL === c.id ? `<button class="btn sm danger" data-a="cuDelYes" data-v="${c.id}">Xóa?</button>` : `<button class="btn ghost sm" data-a="cuDel" data-v="${c.id}">Xóa</button>`}</td></tr>`).join('')}</tbody></table></div>` : ''}
+  </details>`;
+}
+let CU_DEL = null;
+function parseCSV(text) {
+  const out = [];
+  text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(line => {
+    const sep = line.includes(';') ? ';' : line.includes('\t') ? '\t' : ',';
+    const c = line.split(sep).map(x => x.trim().replace(/^"(.*)"$/, '$1').replace(/<br\s*\/?>/gi, ' · ').replace(/<[^>]+>/g, ''));
+    if (!c[0] || /^(front|mặt trước|tiếng nhật)$/i.test(c[0])) return;
+    if (c.length === 1) return;
+    if (c.length === 2) out.push({ f: c[0], r: '', m: c[1], x: '' });
+    else if (c.length === 3) out.push({ f: c[0], r: c[1], m: c[2], x: '' });
+    else out.push({ f: c[0], r: c[1], m: c[2], x: c.slice(3).join(sep === ',' ? ', ' : ' ') });
+  });
+  return out;
+}
+function addCustom(cards) {
+  S.custom = S.custom || []; const have = new Set(S.custom.map(c => c.f + '|' + c.m)); let n = 0;
+  cards.forEach(c => { if (!c.f || !c.m || have.has(c.f + '|' + c.m)) return; S.custom.push({ ...c, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }); have.add(c.f + '|' + c.m); n++; });
+  if (n && !S.set.decks.includes('mine')) S.set.decks = ['mine', ...S.set.decks];
+  buildCustom(); save(); return n;
+}
+
+/* ----- Nhắc học hằng ngày ----- */
+function reminderTimes() { const t = (S.set.remind || '20:30').split(':').map(Number); const d = new Date(); d.setHours(t[0], t[1], 0, 0); if (d < new Date()) d.setDate(d.getDate() + 1); const e = new Date(d.getTime() + 30 * 60000); const f = x => `${x.getFullYear()}${pad(x.getMonth() + 1)}${pad(x.getDate())}T${pad(x.getHours())}${pad(x.getMinutes())}00`; return { s: f(d), e: f(e) }; }
+function appURL() { return location.href.split('#')[0]; }
+function gcalLink() {
+  const { s, e } = reminderTimes(); const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Tokyo';
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('Học tiếng Nhật 30′ (JLPT N2)') + '&details=' + encodeURIComponent('Ôn thẻ đến hạn + 1 phần trong lịch tuần. Mở app: ' + appURL()) + '&dates=' + s + '/' + e + '&ctz=' + encodeURIComponent(tz) + '&recur=' + encodeURIComponent('RRULE:FREQ=DAILY');
+}
+function icsText() {
+  const { s, e } = reminderTimes(); const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Tokyo';
+  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//JLPT N2//VI', 'BEGIN:VEVENT', 'UID:jlpt-n2-daily-' + Date.now() + '@app', 'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z', `DTSTART;TZID=${tz}:${s}`, `DTEND;TZID=${tz}:${e}`, 'RRULE:FREQ=DAILY', 'SUMMARY:Học tiếng Nhật 30′ (JLPT N2)', 'DESCRIPTION:Ôn thẻ đến hạn + 1 phần trong lịch tuần. ' + appURL(), 'URL:' + appURL(), 'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Đến giờ học tiếng Nhật', 'TRIGGER:PT0M', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+}
+function reminderPanel() {
+  return `<section class="panel" id="remind"><div class="ph"><h2>Nhắc học hằng ngày</h2></div>
+    <p class="hint">Tạo sự kiện lặp mỗi ngày trong lịch của bạn, có báo đúng giờ và link mở app. Cách này chạy trên mọi máy, không cần server.</p>
+    <div class="row"><label class="fld" for="rm-time">Giờ nhắc<input id="rm-time" type="time" value="${esc(S.set.remind || '20:30')}" data-a="rmTime"></label></div>
+    <div class="row"><a class="btn pri" id="rm-gcal" href="${esc(gcalLink())}" target="_blank" rel="noopener">Thêm vào Google Calendar</a>${IN_CLAUDE ? '' : '<button class="btn" data-a="rmIcs">Tải file lịch (.ics) cho iPhone / Outlook</button>'}</div>
+  </section>`;
+}
+
 /* ===== ACTIONS ===== */
 const ACT = {
+  shPlay(t) { const g = SH.list[SH.i]; speak(unbr(g.x), +t.dataset.r); },
+  shShow() { SH.show = true; render(); },
+  shNext() { SH.i++; SH.show = false; logAdd('q'); logAdd('c'); save(); render(); },
+  shAgain() { startShadow(); },
+  shClose() { SH = null; render(); },
+  cuAdd() { const v = id => ($('#' + id).value || '').trim(); const n = addCustom([{ f: v('cu-f'), r: v('cu-r'), m: v('cu-m'), x: v('cu-x') }]); toast(n ? 'Đã thêm thẻ' : 'Cần có tiếng Nhật và nghĩa (hoặc thẻ đã có)'); if (n) render(); },
+  cuImport() { const cards = parseCSV($('#cu-csv').value || ''); const n = addCustom(cards); toast(n ? `Đã nhập ${n} thẻ` : 'Không đọc được dòng nào, kiểm tra dấu phân cách'); if (n) render(); },
+  cuDel(t) { CU_DEL = t.dataset.v; render(); },
+  cuDelYes(t) { const id = t.dataset.v; S.custom = (S.custom || []).filter(c => c.id !== id); delete S.srs['mine:' + id]; CU_DEL = null; buildCustom(); save(); render(); },
+  setRet(t) { S.set.ret = +t.value; save(); toast('Đã đổi mức nhớ; áp dụng từ lần ôn tới'); },
+  rmTime(t) { S.set.remind = t.value; save(); const a = $('#rm-gcal'); if (a) a.href = gcalLink(); },
+  rmIcs() { try { const blob = new Blob([icsText()], { type: 'text/calendar' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'nhac-hoc-tieng-nhat.ics'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); toast('Mở file vừa tải để thêm vào lịch'); } catch (e) { toast('Thiết bị không tải được file; dùng nút Google Calendar'); } },
   async gistOn() { const t = $('#gist-token').value; if (!t.trim()) { toast('Hãy dán token trước'); return; } const ok = await GIST.connect(t); toast(ok ? 'Đã kết nối GitHub Gist' : 'Chưa kết nối được, xem thông báo ở trên'); render(); },
   gistOff() { GIST.disconnect(); render(); },
   gistSync() { GIST.sync(); },

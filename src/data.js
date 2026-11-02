@@ -744,9 +744,9 @@ const FORMS = [
 const STAGES = [
   { n: 'Chữ', goal: 'Hiragana + katakana đọc/viết trôi chảy', time: '2–3 tuần', out: 'Đọc được mọi chữ kana', decks: ['hira', 'kata'] },
   { n: 'N5', goal: '~100 kanji, ~800 từ, ngữ pháp 7.1, chia ます/て/ない/た', time: '3 tháng', out: 'Giới thiệu bản thân, mua sắm, hỏi đường', decks: ['kanji5', 'radical', 'g5'] },
-  { n: 'N4', goal: '~300 kanji, ~1.500 từ, ngữ pháp 7.2, khả năng/bị động/sai khiến', time: '3–4 tháng', out: 'Nói chuyện đơn giản ở lab, cửa hàng, bệnh viện', decks: ['g4', 'jita'] },
-  { n: 'N3', goal: '~650 kanji, ~3.700 từ, ngữ pháp 7.3, đọc NHK Easy', time: '5–6 tháng', out: 'Đọc thông báo, email đơn giản, nghe hội thoại', decks: ['g3', 'fukugo', 'kaiwa', 'keigo'] },
-  { n: 'N2', goal: '~1.000 kanji, ~6.000 từ, ngữ pháp 7.4, đọc báo', time: '6–8 tháng (1,5–2 h/ngày)', out: 'Đọc báo, nghe bản tin, làm việc ở công ty Nhật', decks: ['g2', 'fukushi', 'gokei', 'nise', 'senmon'] },
+  { n: 'N4', goal: '~300 kanji, ~1.500 từ, ngữ pháp 7.2, khả năng/bị động/sai khiến', time: '3–4 tháng', out: 'Nói chuyện đơn giản ở lab, cửa hàng, bệnh viện', decks: ['kanji4', 'g4', 'jita'] },
+  { n: 'N3', goal: '~650 kanji, ~3.700 từ, ngữ pháp 7.3, đọc NHK Easy', time: '5–6 tháng', out: 'Đọc thông báo, email đơn giản, nghe hội thoại', decks: ['g3', 'v-life', 'v-health', 'v-work', 'fukugo', 'kaiwa', 'keigo'] },
+  { n: 'N2', goal: '~1.000 kanji, ~6.000 từ, ngữ pháp 7.4, đọc báo', time: '6–8 tháng (1,5–2 h/ngày)', out: 'Đọc báo, nghe bản tin, làm việc ở công ty Nhật', decks: ['g2', 'v-mt', 'v-study', 'v-econ', 'fukushi', 'gokei', 'nise', 'senmon'] },
 ];
 const MILESTONES = [
   ['11/2026 → 7/2027', 'Nhẹ 45–60 phút/ngày song song IELTS: N5 → N4, kanji, nghe đời sống'],
@@ -819,3 +819,275 @@ const PROMPTS = [
   { t: 'Đóng vai luyện kính ngữ', f: [['vai', 'Tình huống', 'nhân viên tòa thị chính, mình đi làm thủ tục chuyển nhà']], p: 'Đóng vai {vai}; nói từng câu một, sửa lỗi kính ngữ cho mình.' },
   { t: 'Lập kế hoạch tuần', f: [['tuan', 'Số tuần đến kỳ thi', '5'], ['muc', 'Đã học đến', 'mục 7.3']], p: 'Lập kế hoạch học tuần này: mình còn {tuan} tuần đến kỳ thi tháng 12, đã học đến {muc}.' },
 ];
+
+/* ===== NỘI DUNG MỞ RỘNG (đợt 1): tự soạn, không chép giáo trình ===== */
+/* Kanji N4 (ước tính phổ biến): char | HV | On | Kun | nghĩa | từ ví dụ */
+const KANJI4 = L(`
+悪|ác|アク|わる(い)|xấu|悪口 わるぐち
+暗|ám|アン|くら(い)|tối|暗記 あんき
+医|y|イ|—|y, chữa bệnh|医者 いしゃ
+意|ý|イ|—|ý|意味 いみ
+以|dĩ|イ|—|từ, lấy|以上 いじょう
+引|dẫn|イン|ひ(く)|kéo|引っ越し ひっこし
+院|viện|イン|—|viện|病院 びょういん
+員|viên|イン|—|thành viên|会社員 かいしゃいん
+運|vận|ウン|はこ(ぶ)|vận chuyển; vận|運動 うんどう
+英|anh|エイ|—|nước Anh|英語 えいご
+映|ánh|エイ|うつ(る)|chiếu|映画 えいが
+遠|viễn|エン|とお(い)|xa|遠足 えんそく
+屋|ốc|オク|や|mái; cửa hàng|部屋 へや
+音|âm|オン|おと|âm thanh|音楽 おんがく
+歌|ca|カ|うた|bài hát|歌手 かしゅ
+夏|hạ|カ|なつ|mùa hè|夏休み なつやすみ
+家|gia|カ・ケ|いえ・うち|nhà|家族 かぞく
+画|họa|ガ・カク|—|tranh; nét|計画 けいかく
+海|hải|カイ|うみ|biển|海外 かいがい
+回|hồi|カイ|まわ(る)|lần; quay|今回 こんかい
+開|khai|カイ|あ(く)・ひら(く)|mở|開発 かいはつ
+界|giới|カイ|—|giới, cõi|世界 せかい
+楽|lạc/nhạc|ガク・ラク|たの(しい)|vui; âm nhạc|楽しみ たのしみ
+館|quán|カン|—|tòa nhà lớn|図書館 としょかん
+漢|hán|カン|—|nhà Hán|漢字 かんじ
+寒|hàn|カン|さむ(い)|lạnh|寒気 さむけ
+顔|nhan|ガン|かお|khuôn mặt|笑顔 えがお
+帰|quy|キ|かえ(る)|về|帰国 きこく
+起|khởi|キ|お(きる)|dậy, xảy ra|起床 きしょう
+究|cứu|キュウ|—|tìm tòi đến cùng|研究 けんきゅう
+急|cấp|キュウ|いそ(ぐ)|gấp|急行 きゅうこう
+牛|ngưu|ギュウ|うし|bò|牛肉 ぎゅうにく
+去|khứ|キョ|さ(る)|qua, rời|去年 きょねん
+強|cường|キョウ|つよ(い)|mạnh|勉強 べんきょう
+教|giáo|キョウ|おし(える)|dạy|教室 きょうしつ
+京|kinh|キョウ|—|kinh đô|東京 とうきょう
+業|nghiệp|ギョウ|—|nghề, nghiệp|授業 じゅぎょう
+近|cận|キン|ちか(い)|gần|最近 さいきん
+銀|ngân|ギン|—|bạc|銀行 ぎんこう
+区|khu|ク|—|khu, quận|区役所 くやくしょ
+計|kế|ケイ|はか(る)|đo; kế|時計 とけい
+兄|huynh|ケイ|あに|anh trai|兄弟 きょうだい
+軽|khinh|ケイ|かる(い)|nhẹ|軽食 けいしょく
+犬|khuyển|ケン|いぬ|chó|子犬 こいぬ
+研|nghiên|ケン|と(ぐ)|mài; nghiên|研修 けんしゅう
+県|huyện|ケン|—|tỉnh (của Nhật)|新潟県 にいがたけん
+験|nghiệm|ケン|—|thử, kinh nghiệm|試験 しけん
+元|nguyên|ゲン・ガン|もと|gốc|元気 げんき
+広|quảng|コウ|ひろ(い)|rộng|広告 こうこく
+工|công|コウ|—|công, thợ|工場 こうじょう
+光|quang|コウ|ひかり|ánh sáng|観光 かんこう
+考|khảo|コウ|かんが(える)|suy nghĩ|参考 さんこう
+号|hiệu|ゴウ|—|số, hiệu|番号 ばんごう
+黒|hắc|コク|くろ(い)|đen|黒板 こくばん
+作|tác|サク・サ|つく(る)|làm, tạo|作文 さくぶん
+産|sản|サン|う(む)|sinh ra, sản xuất|生産 せいさん
+止|chỉ|シ|と(まる)|dừng|中止 ちゅうし
+仕|sĩ|シ|つか(える)|làm việc, phục vụ|仕事 しごと
+使|sử|シ|つか(う)|dùng|使用 しよう
+始|thủy|シ|はじ(める)|bắt đầu|開始 かいし
+姉|tỷ|シ|あね|chị gái|姉妹 しまい
+思|tư|シ|おも(う)|nghĩ|思い出 おもいで
+死|tử|シ|し(ぬ)|chết|死亡 しぼう
+私|tư|シ|わたし|tôi; riêng tư|私立 しりつ
+紙|chỉ|シ|かみ|giấy|手紙 てがみ
+試|thí|シ|ため(す)|thử|試合 しあい
+事|sự|ジ|こと|việc|事故 じこ
+字|tự|ジ|—|chữ|文字 もじ
+自|tự|ジ|みずか(ら)|tự mình|自分 じぶん
+持|trì|ジ|も(つ)|cầm, có|気持ち きもち
+室|thất|シツ|—|phòng|会議室 かいぎしつ
+質|chất|シツ|—|chất|質問 しつもん
+写|tả|シャ|うつ(す)|chụp, chép|写真 しゃしん
+者|giả|シャ|もの|người|研究者 けんきゅうしゃ
+借|tá|シャク|か(りる)|mượn|借金 しゃっきん
+弱|nhược|ジャク|よわ(い)|yếu|弱点 じゃくてん
+主|chủ|シュ|おも・ぬし|chủ, chính|主人 しゅじん
+首|thủ|シュ|くび|cổ; đứng đầu|首都 しゅと
+秋|thu|シュウ|あき|mùa thu|秋分 しゅうぶん
+終|chung|シュウ|お(わる)|kết thúc|終電 しゅうでん
+習|tập|シュウ|なら(う)|học, tập|練習 れんしゅう
+集|tập|シュウ|あつ(める)|tập hợp|集中 しゅうちゅう
+住|trú|ジュウ|す(む)|sống, cư trú|住所 じゅうしょ
+重|trọng|ジュウ|おも(い)|nặng|重要 じゅうよう
+春|xuân|シュン|はる|mùa xuân|青春 せいしゅん
+所|sở|ショ|ところ|nơi chốn|場所 ばしょ
+暑|thử|ショ|あつ(い)|nóng (thời tiết)|残暑 ざんしょ
+場|trường|ジョウ|ば|nơi, bãi|会場 かいじょう
+乗|thừa|ジョウ|の(る)|lên xe|乗車 じょうしゃ
+色|sắc|ショク|いろ|màu|景色 けしき
+心|tâm|シン|こころ|tim, lòng|安心 あんしん
+真|chân|シン|ま|thật|真実 しんじつ
+進|tiến|シン|すす(む)|tiến|進学 しんがく
+図|đồ|ズ・ト|—|hình vẽ, bản đồ|地図 ちず
+世|thế|セ・セイ|よ|đời, thế gian|世話 せわ
+正|chính|セイ・ショウ|ただ(しい)|đúng|正月 しょうがつ
+声|thanh|セイ|こえ|giọng|音声 おんせい
+夕|tịch|セキ|ゆう|chiều tối|夕方 ゆうがた
+切|thiết|セツ|き(る)|cắt|大切 たいせつ
+説|thuyết|セツ|と(く)|giải thích|説明 せつめい
+洗|tẩy|セン|あら(う)|rửa|洗濯 せんたく
+早|tảo|ソウ|はや(い)|sớm|早朝 そうちょう
+走|tẩu|ソウ|はし(る)|chạy|競走 きょうそう
+送|tống|ソウ|おく(る)|gửi|放送 ほうそう
+族|tộc|ゾク|—|dòng họ|家族 かぞく
+村|thôn|ソン|むら|làng|農村 のうそん
+体|thể|タイ|からだ|cơ thể|体育 たいいく
+待|đãi|タイ|ま(つ)|đợi|招待 しょうたい
+貸|thải|タイ|か(す)|cho mượn|賃貸 ちんたい
+台|đài|ダイ・タイ|—|bệ; cái (máy)|台所 だいどころ
+題|đề|ダイ|—|đề|問題 もんだい
+代|đại|ダイ|か(わる)|thời đại; thay|時代 じだい
+短|đoản|タン|みじか(い)|ngắn|短所 たんしょ
+知|tri|チ|し(る)|biết|知識 ちしき
+地|địa|チ・ジ|—|đất|地下鉄 ちかてつ
+池|trì|チ|いけ|ao|電池 でんち
+茶|trà|チャ・サ|—|trà|喫茶店 きっさてん
+着|trước|チャク|き(る)・つ(く)|mặc; đến nơi|到着 とうちゃく
+昼|trú|チュウ|ひる|buổi trưa|昼食 ちゅうしょく
+注|chú|チュウ|そそ(ぐ)|rót; chú ý|注意 ちゅうい
+町|đinh|チョウ|まち|thị trấn|町内 ちょうない
+鳥|điểu|チョウ|とり|chim|白鳥 はくちょう
+朝|triều|チョウ|あさ|buổi sáng|朝食 ちょうしょく
+通|thông|ツウ|かよ(う)・とお(る)|đi qua, thông|交通 こうつう
+弟|đệ|ダイ・テイ|おとうと|em trai|兄弟 きょうだい
+低|đê|テイ|ひく(い)|thấp|最低 さいてい
+転|chuyển|テン|ころ(ぶ)|lăn; chuyển|運転 うんてん
+都|đô|ト・ツ|みやこ|thủ đô|都合 つごう
+度|độ|ド|たび|lần; độ|今度 こんど
+答|đáp|トウ|こた(える)|trả lời|回答 かいとう
+冬|đông|トウ|ふゆ|mùa đông|冬休み ふゆやすみ
+頭|đầu|トウ・ズ|あたま|đầu|頭痛 ずつう
+同|đồng|ドウ|おな(じ)|giống|同時 どうじ
+動|động|ドウ|うご(く)|chuyển động|自動 じどう
+堂|đường|ドウ|—|sảnh, nhà lớn|食堂 しょくどう
+働|động|ドウ|はたら(く)|làm việc|労働 ろうどう
+特|đặc|トク|—|đặc biệt|特急 とっきゅう
+肉|nhục|ニク|—|thịt|筋肉 きんにく
+売|mại|バイ|う(る)|bán|売店 ばいてん
+発|phát|ハツ|—|phát ra|出発 しゅっぱつ
+飯|phạn|ハン|めし|cơm|ご飯 ごはん
+病|bệnh|ビョウ|やまい|bệnh|病気 びょうき
+品|phẩm|ヒン|しな|hàng hóa|製品 せいひん
+不|bất|フ|—|không|不便 ふべん
+風|phong|フウ|かぜ|gió|台風 たいふう
+服|phục|フク|—|quần áo|洋服 ようふく
+物|vật|ブツ|もの|vật|荷物 にもつ
+文|văn|ブン|ふみ|văn|文化 ぶんか
+別|biệt|ベツ|わか(れる)|khác; chia tay|特別 とくべつ
+勉|miễn|ベン|—|cố gắng|勉強 べんきょう
+便|tiện|ベン・ビン|たよ(り)|tiện; thư|便利 べんり
+歩|bộ|ホ|ある(く)|đi bộ|散歩 さんぽ
+方|phương|ホウ|かた|hướng; cách; vị|方法 ほうほう
+妹|muội|マイ|いもうと|em gái|姉妹 しまい
+味|vị|ミ|あじ|vị|趣味 しゅみ
+明|minh|メイ|あか(るい)|sáng|明日 あした
+門|môn|モン|かど|cổng|専門 せんもん
+問|vấn|モン|と(う)|hỏi|問題 もんだい
+夜|dạ|ヤ|よる|đêm|今夜 こんや
+野|dã|ヤ|の|đồng ruộng|野菜 やさい
+薬|dược|ヤク|くすり|thuốc|薬局 やっきょく
+有|hữu|ユウ|あ(る)|có|有名 ゆうめい
+用|dụng|ヨウ|もち(いる)|dùng|用事 ようじ
+洋|dương|ヨウ|—|đại dương; phương Tây|洋食 ようしょく
+理|lý|リ|—|lý lẽ|料理 りょうり
+旅|lữ|リョ|たび|du lịch|旅行 りょこう
+料|liệu|リョウ|—|phí; nguyên liệu|料金 りょうきん
+林|lâm|リン|はやし|rừng|森林 しんりん
+青|thanh|セイ|あお(い)|xanh|青年 せいねん
+赤|xích|セキ|あか(い)|đỏ|赤ちゃん あかちゃん
+少|thiểu|ショウ|すく(ない)・すこ(し)|ít|少年 しょうねん
+多|đa|タ|おお(い)|nhiều|多分 たぶん
+太|thái|タイ|ふと(い)|to, béo|太陽 たいよう
+親|thân|シン|おや|bố mẹ; thân|両親 りょうしん
+森|sâm|シン|もり|rừng rậm|森 もり
+空|không|クウ|そら|bầu trời; trống|空港 くうこう
+建|kiến|ケン|た(てる)|xây|建物 たてもの
+和|hòa|ワ|—|hòa; Nhật Bản|和食 わしょく
+`);
+
+/* Từ vựng theo chủ đề: cấp | chủ đề | từ | đọc | Hán-Việt | nghĩa | ví dụ */
+const VOCAB_TOPICS = { mt: 'Môi trường & xử lý nước', work: 'Công việc & phòng lab', life: 'Đời sống & thủ tục', health: 'Sức khỏe & bệnh viện', study: 'Học tập & nghiên cứu', econ: 'Kinh tế & xã hội' };
+const VOCAB = L(`
+N3|mt|温暖化|おんだんか|ôn noãn hóa|nóng lên (toàn cầu)|地球温暖化が進んでいる。
+N3|mt|資源|しげん|tư nguyên|tài nguyên|資源を大切にする。
+N3|mt|節約|せつやく|tiết ước|tiết kiệm|水を節約する。
+N3|mt|排出|はいしゅつ|bài xuất|thải ra|二酸化炭素の排出を減らす。
+N3|mt|再利用|さいりよう|tái lợi dụng|tái sử dụng|処理した水を再利用する。
+N3|mt|発生|はっせい|phát sinh|phát sinh|悪臭が発生する。
+N2|mt|浄化|じょうか|tịnh hóa|làm sạch|微生物で水を浄化する。
+N2|mt|汚泥|おでい|ô nê|bùn thải|汚泥を処理する。
+N2|mt|有機物|ゆうきぶつ|hữu cơ vật|chất hữu cơ|有機物を分解する。
+N2|mt|分解|ぶんかい|phân giải|phân hủy|微生物が有機物を分解する。
+N2|mt|循環|じゅんかん|tuần hoàn|tuần hoàn|資源を循環させる。
+N2|mt|廃棄物|はいきぶつ|phế khí vật|chất thải|廃棄物を減らす。
+N2|mt|生態系|せいたいけい|sinh thái hệ|hệ sinh thái|生態系に影響を与える。
+N2|mt|規制|きせい|quy chế|quy định, hạn chế|排水の規制が厳しくなった。
+N2|mt|基準|きじゅん|cơ chuẩn|tiêu chuẩn|水質基準を満たす。
+N2|mt|測定|そくてい|trắc định|đo đạc|濃度を測定する。
+N2|mt|除去|じょきょ|trừ khử|loại bỏ|窒素を除去する。
+N2|mt|曝気|ばっき|bộc khí|sục khí|曝気槽に空気を送る。
+N3|work|締め切り|しめきり|—|hạn chót|締め切りは金曜日だ。
+N3|work|打ち合わせ|うちあわせ|—|họp bàn, trao đổi|明日、先生と打ち合わせがある。
+N3|work|報告|ほうこく|báo cáo|báo cáo|結果を先生に報告する。
+N3|work|連絡|れんらく|liên lạc|liên lạc|遅れる場合は連絡してください。
+N3|work|相談|そうだん|tương đàm|bàn bạc, xin ý kiến|進路について先生に相談した。
+N3|work|予定|よてい|dự định|kế hoạch, dự định|来週の予定を確認する。
+N3|work|担当|たんとう|đảm đương|phụ trách|この装置の担当は私です。
+N3|work|資料|しりょう|tư liệu|tài liệu|会議の資料を作る。
+N2|work|提出|ていしゅつ|đề xuất|nộp|レポートを提出する。
+N2|work|確認|かくにん|xác nhận|xác nhận, kiểm tra|データを確認する。
+N2|work|修正|しゅうせい|tu chính|sửa|論文を修正する。
+N2|work|承認|しょうにん|thừa nhận|phê duyệt|計画が承認された。
+N2|work|検討|けんとう|kiểm thảo|xem xét|新しい方法を検討する。
+N2|work|効率|こうりつ|hiệu suất|hiệu suất|作業の効率を上げる。
+N2|work|依頼|いらい|ỷ lại|nhờ, yêu cầu|分析を依頼する。
+N2|work|実施|じっし|thực thi|thực hiện, tiến hành|調査を実施する。
+N3|life|引っ越し|ひっこし|—|chuyển nhà|来月引っ越しをする。
+N3|life|家賃|やちん|gia nhẫm|tiền thuê nhà|家賃を払う。
+N3|life|住民票|じゅうみんひょう|trú dân phiếu|giấy xác nhận cư trú|市役所で住民票をもらう。
+N3|life|届け出|とどけで|—|việc khai báo, đơn trình báo|転居の届け出をする。
+N3|life|保険|ほけん|bảo hiểm|bảo hiểm|健康保険に入る。
+N3|life|窓口|まどぐち|song khẩu|quầy tiếp nhận|二番の窓口へどうぞ。
+N3|life|記入|きにゅう|ký nhập|điền (vào giấy)|この用紙に記入してください。
+N3|life|印鑑|いんかん|ấn giám|con dấu|印鑑を持ってきてください。
+N3|life|振り込み|ふりこみ|—|chuyển khoản|家賃を振り込みで払う。
+N3|life|支払い|しはらい|chi phất|thanh toán|支払いはカードでできますか。
+N3|life|ごみ出し|ごみだし|—|đổ rác|ごみ出しのルールを守る。
+N2|life|契約|けいやく|khế ước|hợp đồng|アパートの契約を結ぶ。
+N2|life|更新|こうしん|canh tân|gia hạn, cập nhật|在留カードを更新する。
+N2|life|手続き|てつづき|thủ tục|thủ tục|市役所で手続きをする。
+N3|health|症状|しょうじょう|chứng trạng|triệu chứng|どんな症状がありますか。
+N3|health|診察|しんさつ|chẩn sát|khám bệnh|医者に診察してもらう。
+N3|health|予約|よやく|dự ước|đặt hẹn, đặt chỗ|病院の予約をする。
+N3|health|処方|しょほう|xử phương|kê đơn|薬を処方してもらう。
+N3|health|体調|たいちょう|thể điều|tình trạng sức khỏe|最近体調がいい。
+N3|health|熱|ねつ|nhiệt|sốt; nhiệt|熱が下がらない。
+N2|health|治療|ちりょう|trị liệu|điều trị|歯の治療を受ける。
+N2|health|健康診断|けんこうしんだん|kiện khang chẩn đoán|khám sức khỏe định kỳ|毎年健康診断を受ける。
+N3|study|論文|ろんぶん|luận văn|bài báo, luận văn|論文を書く。
+N3|study|卒業|そつぎょう|tốt nghiệp|tốt nghiệp|来年3月に卒業する。
+N3|study|奨学金|しょうがくきん|tưởng học kim|học bổng|奨学金をもらっている。
+N3|study|単位|たんい|đơn vị|tín chỉ; đơn vị đo|単位を取る。
+N2|study|指導|しどう|chỉ đạo|hướng dẫn|先生に指導を受ける。
+N2|study|仮説|かせつ|giả thuyết|giả thuyết|仮説を立てる。
+N2|study|考察|こうさつ|khảo sát|bàn luận (phần discussion)|結果について考察する。
+N2|study|結論|けつろん|kết luận|kết luận|結論を出す。
+N2|study|引用|いんよう|dẫn dụng|trích dẫn|先行研究を引用する。
+N2|study|学会|がっかい|học hội|hội nghị khoa học|学会で発表する。
+N2|study|誤差|ごさ|ngộ sai|sai số|測定の誤差が大きい。
+N2|study|平均|へいきん|bình quân|trung bình|平均値を求める。
+N2|study|比較|ひかく|tỷ giác|so sánh|二つの方法を比較する。
+N2|study|課題|かだい|khóa đề|vấn đề cần giải quyết; bài tập|今後の課題を整理する。
+N2|econ|景気|けいき|cảnh khí|tình hình kinh tế|景気が回復している。
+N2|econ|物価|ぶっか|vật giá|giá cả hàng hóa|物価が上がり続けている。
+N2|econ|需要|じゅよう|nhu yếu|nhu cầu|電力の需要が増える。
+N2|econ|供給|きょうきゅう|cung cấp|cung cấp|水の供給が止まった。
+N2|econ|少子化|しょうしか|thiểu tử hóa|tỷ lệ sinh giảm|少子化が問題になっている。
+N2|econ|高齢化|こうれいか|cao linh hóa|già hóa dân số|高齢化が進む。
+N2|econ|人手不足|ひとでぶそく|—|thiếu nhân lực|人手不足の会社が多い。
+N2|econ|傾向|けいこう|khuynh hướng|xu hướng|若者の間にこの傾向が見られる。
+N2|econ|影響|えいきょう|ảnh hưởng|ảnh hưởng|天候が作物に影響する。
+N2|econ|対策|たいさく|đối sách|biện pháp đối phó|地震の対策を立てる。
+N2|econ|増加|ぞうか|tăng gia|gia tăng|外国人の数が増加している。
+N2|econ|減少|げんしょう|giảm thiểu|giảm|人口が減少している。
+N2|econ|割合|わりあい|—|tỷ lệ|女性の割合が高い。
+N2|econ|実態|じったい|thực thái|thực trạng|調査で実態が分かった。
+`);
