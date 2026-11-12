@@ -1932,7 +1932,8 @@ function streak() {
   return n;
 }
 function currentStage() {
-  for (let i = 0; i < STAGES.length; i++) { const p = stageProg(i); if (p < 0.8) return i; }
+  const lastPt = (S.place || []).slice(-1)[0], start = lastPt && lastPt.top ? 1 : 0;
+  for (let i = start; i < STAGES.length; i++) { const p = stageProg(i); if (p < 0.8) return i; }
   return STAGES.length - 1;
 }
 function stageProg(i) { let t = 0, s = 0; STAGES[i].decks.forEach(id => { const st = deckStats(DECK[id]); t += st.total; s += st.seen; }); return t ? s / t : 0; }
