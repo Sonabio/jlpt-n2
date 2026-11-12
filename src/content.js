@@ -1,6 +1,7 @@
 /* ===== NỘI DUNG BÀI TẬP (lưu riêng trên D1, chỉ máy đã ghép mới tải được) =====
-   Hai kho: 'main' = tài liệu N2; 'n345' = đề chính thức + bài luyện N3–N5. Mỗi bộ/đề có lv; C là phần của cấp đang luyện. */
-const SLOTS = ['main', 'n345'];
+   Ba kho: 'main' = tài liệu N2; 'n345' = đề chính thức + bài luyện N3–N5; 'dm' = bài luyện khóa Dũng Mori (N3, N2).
+   Mỗi bộ/đề có lv; C là phần của cấp đang luyện. */
+const SLOTS = ['main', 'n345', 'dm'];
 const CK = k => 'jlpt-n2-content' + (k === 'main' ? '' : '-' + k);
 const CS = {};                // slot → { sets, exams, upd }
 let C = null;                 // { sets, exams } của cấp đang luyện (null nếu cấp này chưa có gì)
@@ -19,7 +20,8 @@ function indexContent() {
   C.sets.forEach(s => {
     SET[s.id] = s;
     (s.passages || []).forEach(p => { PASS[p.pid] = p; });
-    s.items.forEach((it, i) => { ITEM[it.id] = { ...it, tts: it.tts || s.tts, set: s.id, kind: s.kind, i, type: s.kind === 'L' ? 'L' + s.md : 'R' + PASS[it.pid].type }; });
+    // bài từ vựng/ngữ pháp (passage có md) dùng chung màn hình đọc nhưng tính vào dạng K (問題 của phần kiến thức ngôn ngữ)
+    s.items.forEach((it, i) => { const p = PASS[it.pid]; ITEM[it.id] = { ...it, tts: it.tts || s.tts, set: s.id, kind: s.kind, i, type: s.kind === 'L' ? 'L' + s.md : p.md ? 'K' + p.md : 'R' + p.type }; });
   });
 }
 function setTitle(s) { return s.title || (s.src === 'f-' ? `Nền tảng · Chương ${s.unit}` : `Chặng 2 · Bài ${s.unit}`); }
@@ -242,7 +244,7 @@ function importUI() {
     ${any ? `<p class="hint"><b>Trên máy này (dùng được khi không có mạng):</b> ${audLocal}/${nAudio} file nghe bài tập${nEx ? ` · ${exLocal}/${nEx} đề đủ file` : ''}${est && est.used ? ` · chiếm ${fmtMB(est.used)}${est.persisted ? ' · đã khóa không cho trình duyệt tự xóa' : ''}` : ''}.</p>` : ''}
     <label class="btn ${any ? '' : 'pri'}" ${IMP.busy ? 'aria-disabled="true"' : ''}>Chọn thư mục tài liệu…<input type="file" id="impdir" webkitdirectory directory multiple hidden data-a="impPick" ${IMP.busy ? 'disabled' : ''}></label>
     ${CF.cfg ? `<label class="hint"><input type="checkbox" data-a="impCloud" ${IMP.cloud ? 'checked' : ''}> Cũng tải file nghe/đề lên cloud (chỉ cần khi cài máy mới; chậm)</label>` : ''}
-    <p class="hint">Trên laptop chọn thư mục chứa tài liệu (có file content-….json), ví dụ <b>N2_ĐỀ CÁC NĂM</b>, <b>2.DMR-TÀI LIỆU HỌC VIÊN</b>, <b>JLPT_CHINH_THUC_N3-N5</b>; hoặc chọn một thư mục cha chứa tất cả. File đã có sẽ được bỏ qua. Không cần mạng.</p>
+    <p class="hint">Trên laptop chọn thư mục chứa tài liệu (có file content-….json), ví dụ <b>N2_ĐỀ CÁC NĂM</b>, <b>2.DMR-TÀI LIỆU HỌC VIÊN</b>, <b>JLPT_CHINH_THUC_N3-N5</b>, <b>Dung mori</b>; hoặc chọn một thư mục cha chứa tất cả. File đã có sẽ được bỏ qua. Không cần mạng.</p>
     ${IMP.have ? `<p class="hint">Trên cloud: ${[...IMP.have].filter(x => x[0] !== 'x').length}/${nAudio} file nghe bài tập${nEx ? ` · ${exCloud}/${nEx} đề đủ file` : ''}.</p>` : ''}
     ${IMP.msg ? `<p id="impmsg" class="${IMP.msg.startsWith('Lỗi') ? 'bad-t' : ''}">${esc(IMP.msg)}</p>` : ''}
     ${any ? `<div class="row">${CF.cfg ? '<button class="btn ghost sm" data-a="contentRefresh">Tải lại nội dung từ cloud</button>' : ''}<button class="btn ghost sm" data-a="audioClear">Xóa file nghe tạm (tải từ cloud)</button></div>` : ''}
