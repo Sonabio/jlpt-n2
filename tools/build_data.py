@@ -7,7 +7,7 @@ Chạy: python3 tools/build_data.py RAW_DIR
 """
 import csv, json, sys, re, os
 RAW = sys.argv[1]
-OUT = os.path.join(os.path.dirname(__file__), '..', 'data')
+OUT = os.path.join(os.path.dirname(__file__), '..', 'public', 'data')
 
 def kata(s):
     return ''.join(chr(ord(c) + 96) if 'ぁ' <= c <= 'ゖ' else c for c in s)

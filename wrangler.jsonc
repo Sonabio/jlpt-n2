@@ -1,0 +1,11 @@
+{
+  // Worker phục vụ app (public/) + API đồng bộ (worker/index.js) trên D1
+  "name": "jlpt-n2",
+  "main": "worker/index.js",
+  "compatibility_date": "2025-06-01",
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "jlpt-n2", "database_id": "D1_DATABASE_ID" }
+  ],
+  "observability": { "enabled": true }
+}

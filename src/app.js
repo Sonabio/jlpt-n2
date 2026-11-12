@@ -89,19 +89,22 @@ function buildCustom() {
 
 /* ===== STATE + SYNC ===== */
 const LSK = 'jlpt-n2-son-v1';
-const DEF = () => ({ v: 1, upd: 0, srs: {}, log: {}, nw: { d: 0, c: 0 }, set: { newPer: 10, decks: ['kj5', 'vb5', 'g5', 'kj4', 'vb4', 'g4', 'jita'], target: '2028-07-02', rev: false, daily: { w: 12, k: 3, g: 2 }, dev: 'auto', typeRev: false, romaji: false }, exams: [], week: {}, chk: {}, qs: {}, place: [], custom: [] });
+const DEF = () => ({ v: 1, upd: 0, srs: {}, log: {}, nw: { d: 0, c: 0 }, set: { newPer: 10, decks: ['kj5', 'vb5', 'g5', 'kj4', 'vb4', 'g4', 'jita'], target: '2028-07-02', rev: false, daily: { w: 12, k: 3, g: 2 }, dev: 'auto', typeRev: false, romaji: false }, exams: [], week: {}, chk: {}, qs: {}, place: [], custom: [], dlog: {}, cdel: [], setUpd: 0 });
 let S = DEF();
-function merge(o) { const d = DEF(); return migrate({ ...d, ...o, set: { ...d.set, ...(o.set || {}) }, typing: o.typing || [] }); }
+function merge(o) { const d = DEF(); const st = migrate({ ...d, ...o, set: { ...d.set, ...(o.set || {}) }, typing: o.typing || [] }); if (!o.dlog) delete st.dlog; ensureDlog(st); return rebuildLog(st); }
 try { const raw = localStorage.getItem(LSK); if (raw) S = merge(JSON.parse(raw)); } catch (e) { }
 let SY = { mode: 'local', msg: 'Đang kiểm tra đồng bộ…', kind: null, writing: false, again: false, t: 0 };
 const IN_CLAUDE = !!(window.claude && window.claude.use);
 function save() {
   S.upd = Date.now();
+  const sj = JSON.stringify(S.set); if (save._set !== undefined && sj !== save._set) S.setUpd = Date.now(); save._set = sj;
+  if (SY.kind === 'cf') { try { localStorage.setItem(LSK, JSON.stringify(S)); } catch (e) { } CF.schedule(); return; }
   try { localStorage.setItem(LSK, JSON.stringify(S)); } catch (e) { }
   if (SY.kind) { clearTimeout(SY.t); SY.t = setTimeout(pushRemote, 2000); }
 }
 async function pushRemote() {
   if (!SY.kind) return;
+  if (SY.kind === 'cf') return CF.sync();
   if (SY.writing) { SY.again = true; return; }
   SY.writing = true;
   try {
@@ -116,11 +119,11 @@ function setSync(mode, msg) { SY.mode = mode; SY.msg = msg; document.querySelect
 function adoptRemote(data) {
   if (!data || typeof data.s !== 'string') return false;
   if ((data.upd || 0) <= (S.upd || 0)) return false;
-  try { S = merge(JSON.parse(data.s)); localStorage.setItem(LSK, JSON.stringify(S)); buildCustom(); return true; } catch (e) { return false; }
+  try { const before = JSON.stringify(S); S = mergeState(S, merge(JSON.parse(data.s))); localStorage.setItem(LSK, JSON.stringify(S)); buildCustom(); return JSON.stringify(S) !== before; } catch (e) { return false; }
 }
 function rerenderAfterRemote() { if (!(route === 'review' && RV && !RV.done)) render(); else RV.remoteNote = true; }
 async function initSync() {
-  if (!IN_CLAUDE) { GIST.init(); return; }
+  if (!IN_CLAUDE) { if (CF.start()) return; CF.status().then(() => { if (route === 'plan') render(); }); GIST.init(); return; }
   const timer = setTimeout(() => { if (SY.mode !== 'cloud') setSync('local', 'Chưa kết nối được tài khoản. Tiến độ đang lưu trên máy này.'); }, 10000);
   try {
     const [db, user] = await Promise.all([claude.use('db'), claude.use('user')]);
@@ -205,7 +208,7 @@ const GIST = {
 
 /* ===== SRS (SM-2 rút gọn) ===== */
 const today = () => dayNum();
-function logAdd(field, n = 1) { const k = dayKey(); const l = S.log[k] || (S.log[k] = { r: 0, q: 0, c: 0, m: 0 }); l[field] = (l[field] || 0) + n; }
+function logAdd(field, n = 1) { const k = dayKey(); const l = S.log[k] || (S.log[k] = { r: 0, q: 0, c: 0, m: 0 }); l[field] = (l[field] || 0) + n; const dl = S.dlog || (S.dlog = {}); const dd = dl[DEV] || (dl[DEV] = {}); const x = dd[k] || (dd[k] = {}); x[field] = (x[field] || 0) + n; }
 function newLeft() { const d = today(); return Math.max(0, S.set.newPer - (S.nw.d === d ? S.nw.c : 0)); }
 /* FSRS-4.5 (tham số mặc định), độ chính xác theo ngày. Trạng thái: [due, ivl, D, S, reps, lapses, lastReview].
    Thẻ cũ dạng SM-2 [due, ivl, ease, reps, lapses] được chuyển đổi khi ôn lần kế tiếp. */
@@ -333,6 +336,7 @@ function render() {
   document.body.dataset.dev = devMode();
   v.innerHTML = ({ today: vToday, learn: vLearn, review: vReview, typing: vTyping, practice: vPractice, lookup: vLookup, exam: vExam, plan: vPlan })[route]();
   if (route === 'learn' && FL) flowAfterRender();
+  if (route === 'plan' && CF.pair) loadQR().then(drawQR);
   if (route === 'typing' && TY) typingAfterRender();
   setSync(SY.mode, SY.msg);
   if (route === 'exam') drawExamTimer();
@@ -863,7 +867,7 @@ function vPlan() {
   <section class="panel" id="setup">
     <div class="ph"><h2>Cài đặt và đồng bộ</h2></div>
     <div class="syncline"><span class="dot syncdot"></span><span class="synctext">${esc(SY.msg)}</span></div>
-    ${IN_CLAUDE ? '' : gistUI()}
+    ${IN_CLAUDE ? '' : syncUI()}
     ${studySettings()}
     <fieldset class="fs"><legend>Bộ thẻ lấy mục mới (luồng Học)</legend>
       <div class="deckpick">${DECKS.map(d => `<label class="check"><input type="checkbox" id="dk-${d.id}" data-a="deckTog" data-v="${d.id}" ${S.set.decks.includes(d.id) ? 'checked' : ''}><span><span class="lv">${d.lv}</span> ${esc(d.name)} <small class="muted num">${d.cards.length}</small></span></label>`).join('')}</div>
@@ -973,7 +977,7 @@ const ACT = {
   cuAdd() { const v = id => ($('#' + id).value || '').trim(); const n = addCustom([{ f: v('cu-f'), r: v('cu-r'), m: v('cu-m'), x: v('cu-x') }]); toast(n ? 'Đã thêm thẻ' : 'Cần có tiếng Nhật và nghĩa (hoặc thẻ đã có)'); if (n) render(); },
   cuImport() { const cards = parseCSV($('#cu-csv').value || ''); const n = addCustom(cards); toast(n ? `Đã nhập ${n} thẻ` : 'Không đọc được dòng nào, kiểm tra dấu phân cách'); if (n) render(); },
   cuDel(t) { CU_DEL = t.dataset.v; render(); },
-  cuDelYes(t) { const id = t.dataset.v; S.custom = (S.custom || []).filter(c => c.id !== id); delete S.srs['mine:' + id]; CU_DEL = null; buildCustom(); save(); render(); },
+  cuDelYes(t) { const id = t.dataset.v; S.custom = (S.custom || []).filter(c => c.id !== id); S.cdel = [...(S.cdel || []), id]; delete S.srs['mine:' + id]; CU_DEL = null; buildCustom(); save(); render(); },
   setRet(t) { S.set.ret = +t.value; save(); toast('Đã đổi mức nhớ; áp dụng từ lần ôn tới'); },
   rmTime(t) { S.set.remind = t.value; save(); const a = $('#rm-gcal'); if (a) a.href = gcalLink(); },
   rmIcs() { try { const blob = new Blob([icsText()], { type: 'text/calendar' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'nhac-hoc-tieng-nhat.ics'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); toast('Mở file vừa tải để thêm vào lịch'); } catch (e) { toast('Thiết bị không tải được file; dùng nút Google Calendar'); } },

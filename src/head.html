@@ -357,6 +357,11 @@ code { font-size: .86em; background: var(--bg); border-radius: 4px; padding: 0 4
 .lcard .kpis b { font-size: 1.4rem; }
 body[data-dev="phone"] .qs.huge { font-size: 3rem; }
 body[data-dev="phone"] .opt { min-height: 56px; }
+.pairbox { display: flex; flex-direction: column; align-items: center; gap: 8px; border: 1px solid var(--ai); border-radius: 10px; padding: 14px; text-align: center; }
+.paircode { font-size: 2.2rem; font-weight: 700; letter-spacing: .12em; color: var(--ai); }
+.qr { width: 180px; max-width: 100%; background: #fff; padding: 6px; border-radius: 8px; }
+.qr svg { width: 100%; height: auto; display: block; }
+code.big { display: inline-block; font-size: 1.1rem; letter-spacing: .06em; padding: 4px 8px; margin-top: 4px; }
 .foot { font-size: .78rem; text-align: center; }
 
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--paper); padding: 9px 16px; border-radius: 8px; font-size: .9rem; z-index: 40; max-width: calc(100% - 32px); box-shadow: var(--shadow); }

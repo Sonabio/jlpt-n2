@@ -1,2 +1,2 @@
 /* ===== BOOT ===== */
-buildCustom(); readHash(); render(); initSync();
+buildCustom(); handlePairHash(); readHash(); render(); initSync();

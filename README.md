@@ -18,13 +18,15 @@ App học và ôn thi tiếng Nhật từ con số 0 đến JLPT N2, chạy như
 - **Android (Chrome):** mở link → menu ⋮ → *Cài đặt ứng dụng*.
 - **Máy tính (Chrome/Edge):** biểu tượng cài đặt ở thanh địa chỉ.
 
-## Đồng bộ giữa các thiết bị
-Tiến độ luôn lưu trong trình duyệt (dùng được offline). Để đồng bộ điện thoại ↔ máy tính:
-1. Tạo token GitHub chỉ có quyền `gist`: https://github.com/settings/tokens/new?scopes=gist&description=JLPT%20N2%20app
-2. Trong app: **Kế hoạch → Cài đặt và đồng bộ** → dán token → *Kết nối*. Làm trên từng thiết bị.
-3. App tự lưu vào một gist riêng tư tên `jlpt-n2-progress.json`, tự tải bản mới khi mở app.
+## Đồng bộ giữa các thiết bị (Cloudflare Worker + D1)
+Tiến độ luôn lưu trong trình duyệt (dùng được offline) và gộp lên D1 qua `/api/sync`.
+1. Máy đầu tiên: **Kế hoạch → Cài đặt và đồng bộ → Bật đồng bộ (máy đầu tiên)**. Lưu lại **mã khôi phục**.
+2. Máy thứ hai: trên máy đầu bấm **Ghép thêm máy** → nhập mã 8 ký tự (hoặc quét QR) trên máy thứ hai.
+3. Dữ liệu gộp theo từng thẻ (giữ lần ôn mới nhất), nhật ký học lưu riêng từng máy rồi cộng lại, nên học offline trên cả hai máy không mất.
+4. **Đổi khóa** ngắt mọi máy khác; **mã khôi phục** lấy lại quyền khi mất hết máy.
 
-Token chỉ nằm trong trình duyệt của thiết bị đó, không có trong repo.
+Chỉ một người dùng: không gian đồng bộ đầu tiên là chủ, máy khác chỉ vào được bằng mã ghép. Khóa chỉ lưu dưới dạng SHA-256 trên D1.
+`/api/report/<mã>` trả về thống kê tuần cho lịch báo cáo tự động (mã không nằm trong repo).
 
 ## Cấu trúc
 ```
@@ -34,10 +36,11 @@ src/placement.js  bài kiểm tra trình độ
 src/flow.js     luồng học, luyện gõ, thiết bị, báo cáo tuần
 src/boot.js     khởi động
 data/*.js       dữ liệu kanji, từ vựng (sinh bằng tools/build_data.py)
+src/sync.js     gộp dữ liệu, đồng bộ Cloudflare, ghép máy
 src/head.html   giao diện (CSS + khung trang)
-build.sh        ghép thành index.html (PWA) và artifact.html (bản claude.ai)
-index.html      file GitHub Pages phục vụ
-sw.js           service worker (offline)
-manifest.webmanifest, icons/
+build.sh        ghép thành public/index.html (PWA) và artifact.html (bản claude.ai)
+worker/index.js Worker: phục vụ public/ + API đồng bộ trên D1
+wrangler.jsonc  cấu hình Worker (tên jlpt-n2, binding DB)
+public/         file tĩnh: index.html, sw.js, manifest, icons/, data/, vendor/qrcode.js
 ```
-Sửa trong `src/`, chạy `./build.sh`, rồi commit cả `index.html`. Khi đổi nội dung, tăng `VERSION` trong `sw.js`.
+Sửa trong `src/`, chạy `./build.sh`, rồi commit cả `public/index.html`. Khi đổi nội dung, tăng `VERSION` trong `sw.js`.
