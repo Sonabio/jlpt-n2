@@ -1,5 +1,5 @@
 // Service worker: app chạy offline; trang chính lấy mạng trước để luôn có bản mới.
-const VERSION = 'jlpt-n2-v7';
+const VERSION = 'jlpt-n2-v8';
 const SHELL = ['./', './index.html', './data/kanji.js', './data/vocab.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

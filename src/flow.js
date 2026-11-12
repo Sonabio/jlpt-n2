@@ -96,7 +96,7 @@ function buildSpec(c) {
     const others = DECK[c.d].cards.filter(x => x !== c);
     if (c.ew && c.er) sp.listen = { audio: c.er, q: 'Từ vừa nghe viết thế nào?', ...mkOpts(c.ew, others.map(x => x.ew).filter(Boolean)), jp: true, reveal: c.ew + ' ' + c.er };
     else sp.listen = { audio: (c.on || c.kun || c.f).split('・')[0], q: 'Âm vừa nghe là của chữ nào?', ...mkOpts(c.f, others.map(x => x.f)), jp: true, reveal: c.f };
-    sp.choose = { q: `<p class="qs big">${esc(c.m)}</p><p class="qsub">Hán-Việt: <b>${esc(c.hv || '—')}</b> · chọn chữ Hán</p>`, ...mkOpts(c.f, others.map(x => x.f)), jp: true, big: true };
+    sp.choose = { q: `<p class="qs big">${esc(c.m)}</p>${c.en ? `<p class="qsub" lang="en">${esc(c.en)}</p>` : ''}<p class="qsub">Hán-Việt: <b>${esc(c.hv || '—')}</b> · chọn chữ Hán</p>`, ...mkOpts(c.f, others.map(x => x.f)), jp: true, big: true };
     if (c.ew && c.er) sp.type = { q: `<p class="qs huge" lang="ja">${esc(c.ew)}</p><p class="qsub">Gõ cách đọc (kana)</p>`, answers: [c.er], show: c.er };
     else sp.type = { q: `<p class="qs huge" lang="ja">${esc(c.f)}</p><p class="qsub">Gõ một cách đọc On hoặc Kun (kana)</p>`, answers: [...String(c.on || '').split('・'), ...String(c.kun || '').split('・')].filter(Boolean), show: [c.on, c.kun].filter(Boolean).join(' / ') };
   } else {

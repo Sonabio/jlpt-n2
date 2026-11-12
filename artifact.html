@@ -1624,10 +1624,10 @@ if (HAS_BULK) VB.forEach(([w, r]) => { if (r) for (const ch of w) if (isKanji(ch
 deck('hira', 'Hiragana', 'Chữ', KANA.map(([h, r]) => ({ f: h, m: r })), false, 'kana');
 deck('kata', 'Katakana', 'Chữ', KANA.map(([h, r]) => ({ f: toKata(h), m: r })), false, 'kana');
 if (HAS_BULK) {
-  [5, 4, 3, 2, 1].forEach(lv => deck('kj' + lv, 'Kanji N' + lv, 'N' + lv, KJ.filter(k => k[1] === lv).map(([c, l, hv, on, kun, en]) => {
+  [5, 4, 3, 2, 1].forEach(lv => deck('kj' + lv, 'Kanji N' + lv, 'N' + lv, KJ.filter(k => k[1] === lv).map(([c, l, hv, on, kun, en, kvi]) => {
     const vi = VI_KANJI[c]; const ex = vi ? vi.ex.split(' · ')[0] : (KJ_EX[c] ? KJ_EX[c].join(' ') : '');
     const [ew, er] = ex.split(' ');
-    return { k: 'k:' + c, f: c, hv: vi ? vi.hv : hv, on, kun, r: `On ${on || '—'} · Kun ${kun || '—'}`, m: vi ? vi.m : en, en: vi ? en : '', x: ex, ew, er, say: ew || c };
+    return { k: 'k:' + c, f: c, hv: vi ? vi.hv : hv, on, kun, r: `On ${on || '—'} · Kun ${kun || '—'}`, m: vi ? vi.m : (kvi || en), en: vi || kvi ? en : '', x: ex, ew, er, say: ew || c };
   }), false, 'kanji'));
   [5, 4, 3, 2, 1].forEach(lv => deck('vb' + lv, 'Từ vựng N' + lv, 'N' + lv, VB.filter(v => v[4] === lv).map(([w, r, en, hv]) => {
     const vi = VI_WORD[w];
@@ -1962,6 +1962,7 @@ function cardBack(c) {
   if (c.r) rows.push(`<div class="cb-r" lang="ja">${esc(c.r)}</div>`);
   if (c.hv) rows.push(`<div class="cb-hv"><span class="lbl">Hán-Việt</span> ${esc(c.hv)}</div>`);
   if (!S.set.rev || c.d === 'hira' || c.d === 'kata') rows.push(`<div class="cb-m">${esc(c.m)}</div>`);
+  if (c.en) rows.push(`<div class="cb-n" lang="en">${esc(c.en)}</div>`);
   if (c.n) rows.push(`<div class="cb-n">${esc(c.n)}</div>`);
   if (c.x) rows.push(`<div class="cb-x" lang="ja">${esc(c.x)}</div>`);
   return rows.join('');
@@ -2235,7 +2236,7 @@ function lkBody() {
       const rs = RADICALS.filter(r => match(...r));
       return `<div class="seg">${['N5', 'N4', 'N3', 'N2', 'N1'].map(l => `<button class="${kl === l ? 'on' : ''}" data-a="lkKlv" data-v="${l}">${l}</button>`).join('')}</div>
       <h2 class="sh">Kanji ${kl} <span class="muted num">${ks.length}${ks.length > 300 ? ' · hiện 300 chữ đầu, gõ tìm để lọc' : ''}</span></h2>
-      <div class="kgrid">${ks.slice(0, 300).map(c => `<button class="kc" data-a="say" data-v="${esc(c.say || c.f)}" title="Nghe từ ví dụ"><span class="kch" lang="ja">${c.f}</span><span class="khv">${esc(c.hv || '')}</span><span class="km">${esc(c.m)}</span><span class="kr" lang="ja">${esc(c.r)}</span><span class="kx" lang="ja">${esc(c.x || '')}</span></button>`).join('')}</div>
+      <div class="kgrid">${ks.slice(0, 300).map(c => `<button class="kc" data-a="say" data-v="${esc(c.say || c.f)}" title="Nghe từ ví dụ"><span class="kch" lang="ja">${c.f}</span><span class="khv">${esc(c.hv || '')}</span><span class="km">${esc(c.m)}</span>${c.en ? `<span class="kx" lang="en">${esc(c.en)}</span>` : ''}<span class="kr" lang="ja">${esc(c.r)}</span><span class="kx" lang="ja">${esc(c.x || '')}</span></button>`).join('')}</div>
       <h2 class="sh">Bộ thủ quan trọng <span class="muted num">${rs.length}</span></h2>${table(['Bộ', 'Tên', 'Nghĩa gợi ý', 'Ví dụ'], rs, [0, 3])}
       <h2 class="sh">Chữ hay nhầm</h2><p class="pairs" lang="ja">待/持/特 · 未/末 · 土/士 · 責/積/績 · 険/検/験 · 復/複/腹 · 微/徴 · 析/折 · 侍/待</p>`;
     }
@@ -2960,7 +2961,7 @@ function buildSpec(c) {
     const others = DECK[c.d].cards.filter(x => x !== c);
     if (c.ew && c.er) sp.listen = { audio: c.er, q: 'Từ vừa nghe viết thế nào?', ...mkOpts(c.ew, others.map(x => x.ew).filter(Boolean)), jp: true, reveal: c.ew + ' ' + c.er };
     else sp.listen = { audio: (c.on || c.kun || c.f).split('・')[0], q: 'Âm vừa nghe là của chữ nào?', ...mkOpts(c.f, others.map(x => x.f)), jp: true, reveal: c.f };
-    sp.choose = { q: `<p class="qs big">${esc(c.m)}</p><p class="qsub">Hán-Việt: <b>${esc(c.hv || '—')}</b> · chọn chữ Hán</p>`, ...mkOpts(c.f, others.map(x => x.f)), jp: true, big: true };
+    sp.choose = { q: `<p class="qs big">${esc(c.m)}</p>${c.en ? `<p class="qsub" lang="en">${esc(c.en)}</p>` : ''}<p class="qsub">Hán-Việt: <b>${esc(c.hv || '—')}</b> · chọn chữ Hán</p>`, ...mkOpts(c.f, others.map(x => x.f)), jp: true, big: true };
     if (c.ew && c.er) sp.type = { q: `<p class="qs huge" lang="ja">${esc(c.ew)}</p><p class="qsub">Gõ cách đọc (kana)</p>`, answers: [c.er], show: c.er };
     else sp.type = { q: `<p class="qs huge" lang="ja">${esc(c.f)}</p><p class="qsub">Gõ một cách đọc On hoặc Kun (kana)</p>`, answers: [...String(c.on || '').split('・'), ...String(c.kun || '').split('・')].filter(Boolean), show: [c.on, c.kun].filter(Boolean).join(' / ') };
   } else {
