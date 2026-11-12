@@ -1,7 +1,7 @@
 /* ===== NỘI DUNG BÀI TẬP (lưu riêng trên D1, chỉ máy đã ghép mới tải được) =====
-   Ba kho: 'main' = tài liệu N2; 'n345' = đề chính thức + bài luyện N3–N5; 'dm' = bài luyện khóa Dũng Mori (N3, N2).
+   Bốn kho: 'main' = tài liệu N2; 'n345' = đề chính thức + bài luyện N3–N5; 'dm' = bài luyện khóa Dũng Mori (N3, N2); 'n3de' = 26 đề luyện N3 (文字語彙・文法・読解).
    Mỗi bộ/đề có lv; C là phần của cấp đang luyện. */
-const SLOTS = ['main', 'n345', 'dm'];
+const SLOTS = ['main', 'n345', 'dm', 'n3de'];
 const CK = k => 'jlpt-n2-content' + (k === 'main' ? '' : '-' + k);
 const CS = {};                // slot → { sets, exams, upd }
 let C = null;                 // { sets, exams } của cấp đang luyện (null nếu cấp này chưa có gì)
@@ -197,7 +197,9 @@ async function importFolder(files) {
     await localFilesLoad();
     const todo = jobs.filter(([id]) => !LF.has(id));
     IMP.total = jobs.length; IMP.skip = jobs.length - todo.length;
-    if (!jobs.length) IMP.msg = 'Không thấy file khớp. Hãy chọn đúng thư mục tài liệu (xem hướng dẫn bên dưới).';
+    // bộ chỉ có chữ (không cần MP3/PDF, vd 26 đề N3) thì không có file nào để lưu — báo nhập xong, không báo lỗi
+    const needFiles = contents.some(c => c.sets.some(s => s.items.some(it => it.audio)) || (c.exams || []).length);
+    if (!jobs.length) IMP.msg = needFiles ? 'Không thấy file khớp. Hãy chọn đúng thư mục tài liệu (xem hướng dẫn bên dưới).' : `Xong: đã lưu ${contents.reduce((a, c) => a + nItemsOf(c), 0)} câu vào máy (bộ này không cần file nghe/PDF).`;
     if (todo.length) await askPersist();
     for (const [id, f, type] of todo) {          // lần lượt từng file để không tốn bộ nhớ
       try { await filePut(id, new Blob([await f.arrayBuffer()], { type }), type); }
@@ -244,7 +246,7 @@ function importUI() {
     ${any ? `<p class="hint"><b>Trên máy này (dùng được khi không có mạng):</b> ${audLocal}/${nAudio} file nghe bài tập${nEx ? ` · ${exLocal}/${nEx} đề đủ file` : ''}${est && est.used ? ` · chiếm ${fmtMB(est.used)}${est.persisted ? ' · đã khóa không cho trình duyệt tự xóa' : ''}` : ''}.</p>` : ''}
     <label class="btn ${any ? '' : 'pri'}" ${IMP.busy ? 'aria-disabled="true"' : ''}>Chọn thư mục tài liệu…<input type="file" id="impdir" webkitdirectory directory multiple hidden data-a="impPick" ${IMP.busy ? 'disabled' : ''}></label>
     ${CF.cfg ? `<label class="hint"><input type="checkbox" data-a="impCloud" ${IMP.cloud ? 'checked' : ''}> Cũng tải file nghe/đề lên cloud (chỉ cần khi cài máy mới; chậm)</label>` : ''}
-    <p class="hint">Trên laptop chọn thư mục chứa tài liệu (có file content-….json), ví dụ <b>N2_ĐỀ CÁC NĂM</b>, <b>2.DMR-TÀI LIỆU HỌC VIÊN</b>, <b>JLPT_CHINH_THUC_N3-N5</b>, <b>Dung mori</b>; hoặc chọn một thư mục cha chứa tất cả. File đã có sẽ được bỏ qua. Không cần mạng.</p>
+    <p class="hint">Trên laptop chọn thư mục chứa tài liệu (có file content-….json), ví dụ <b>N2_ĐỀ CÁC NĂM</b>, <b>2.DMR-TÀI LIỆU HỌC VIÊN</b>, <b>JLPT_CHINH_THUC_N3-N5</b>, <b>Dung mori</b>, <b>N3_26_DE</b>; hoặc chọn một thư mục cha chứa tất cả. File đã có sẽ được bỏ qua. Không cần mạng.</p>
     ${IMP.have ? `<p class="hint">Trên cloud: ${[...IMP.have].filter(x => x[0] !== 'x').length}/${nAudio} file nghe bài tập${nEx ? ` · ${exCloud}/${nEx} đề đủ file` : ''}.</p>` : ''}
     ${IMP.msg ? `<p id="impmsg" class="${IMP.msg.startsWith('Lỗi') ? 'bad-t' : ''}">${esc(IMP.msg)}</p>` : ''}
     ${any ? `<div class="row">${CF.cfg ? '<button class="btn ghost sm" data-a="contentRefresh">Tải lại nội dung từ cloud</button>' : ''}<button class="btn ghost sm" data-a="audioClear">Xóa file nghe tạm (tải từ cloud)</button></div>` : ''}
