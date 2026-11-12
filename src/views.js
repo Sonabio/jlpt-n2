@@ -141,7 +141,7 @@ VIEWS.today = () => {
   }
   const bars = Array.from({ length: 14 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - 13 + i); return [d, dayMin(dayKey(d))]; });
   const mx = Math.max(120, ...bars.map(b => b[1]));
-  return `<div class="hero"><div class="hero-l"><span class="eyebrow">Luyện đề nghe · đọc · đang luyện ${curLv()}</span><h1>${new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'numeric' })}</h1></div>
+  return `${backupNudge()}<div class="hero"><div class="hero-l"><span class="eyebrow">Luyện đề nghe · đọc · đang luyện ${curLv()}</span><h1>${new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'numeric' })}</h1></div>
     <div class="count"><span class="count-n">${days}</span><span class="count-l">ngày</span><span></span><span class="count-d">đến JLPT N2 ${fmtDate(ex.d)}</span></div></div>
   <section class="panel lvbar"><span><b>Cấp đang luyện</b> <span class="hint">đổi cấp thì bài luyện, đề thi và điểm yếu đổi theo</span></span>${lvSwitchHTML()}</section>
   ${plan}
@@ -177,14 +177,15 @@ VIEWS.plan = () => {
     <label class="fld">Thiết bị này<select data-a="setDev">${[['auto', 'Tự nhận'], ['pc', 'Máy tính: luyện chính'], ['phone', 'Điện thoại: ôn phần yếu']].map(([k, v]) => `<option value="${k}" ${S.set.dev === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label></div></section>
   <section class="panel"><div class="ph"><h2>Đồng bộ</h2><span class="syncline"><span class="dot syncdot"></span><span class="synctext"></span></span></div>${syncUI()}</section>
   <section class="panel"><div class="ph"><h2>Tài liệu khóa học</h2></div>${importUI()}</section>
+  <section class="panel"><div class="ph"><h2>Sao lưu</h2></div>${backupUI()}</section>
   <section class="panel"><div class="ph"><h2>4 tuần gần đây</h2><span class="hint">mục tiêu 840 phút/tuần</span></div>
     <div class="tbl"><table><thead><tr><th>Tuần</th><th>Phút</th><th>Nghe</th><th>Đọc</th><th>Ôn</th><th>Câu</th><th>Đúng</th><th>Ngày học</th></tr></thead><tbody>${ws.map(w => `<tr><td>${w.w}</td><td class="num"><b>${w.min}</b></td><td class="num">${Math.round(w.l / 60)}</td><td class="num">${Math.round(w.r / 60)}</td><td class="num">${Math.round(w.d / 60)}</td><td class="num">${w.n}</td><td class="num">${w.n ? pct(w.c, w.n) + '%' : '—'}</td><td class="num">${w.days}/7</td></tr>`).join('')}</tbody></table></div>
     <p class="hint">Lịch báo cáo tự động mỗi tối Chủ nhật đọc số liệu này từ máy chủ.</p></section>
   <section class="panel"><div class="ph"><h2>Dữ liệu trên máy này</h2></div>
     <div class="row">${PL.reset ? '<button class="btn danger" data-a="resetYes">Xóa hết lịch sử làm bài trên mọi máy</button><button class="btn ghost" data-a="resetNo">Hủy</button>' : '<button class="btn ghost" data-a="reset">Xóa lịch sử làm bài…</button>'}</div></section>
-  <p class="foot muted">Nội dung bài tập thuộc tài liệu khóa học của bạn, chỉ lưu trên máy chủ riêng. Mã QR: qrcode-generator (MIT).</p>`;
+  <p class="foot muted">Nội dung bài tập thuộc tài liệu khóa học của bạn, chỉ lưu trên máy này và máy chủ riêng. Mã QR: qrcode-generator (MIT).</p>`;
 };
-AFTER.plan = () => { if (CF.pair) loadQR().then(drawQR); if (CF.cfg && (allSets().length || allExams().length) && !IMP.have && !IMP.busy && devMode() === 'pc') audioHave().then(h => { if (h && route === 'plan') render(); }); };
+AFTER.plan = () => { if (CF.pair) loadQR().then(drawQR); if (!IMP.est && !IMP.busy) storageInfo().then(e => { IMP.est = e; if (route === 'plan' && e.used) render(); }); if (CF.cfg && (allSets().length || allExams().length) && !IMP.have && !IMP.busy && devMode() === 'pc') audioHave().then(h => { if (h && route === 'plan') render(); }); };
 Object.assign(ACT, {
   setTarget(t) { S.set.target = t.value; save(); },
   setDev(t) { S.set.dev = t.value; save(); render(); },

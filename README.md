@@ -12,9 +12,11 @@ Web luyện đề **nghe** và **đọc** JLPT N2. Máy tính để luyện chí
 - **Ôn nhanh** (điện thoại): thẻ cụm từ (FSRS) + câu sai đến hạn (câu nghe có thể đọc script thay vì nghe).
 - **Thi thử đề thật 2010–2026** (32 đề): xem đề PDF gốc + phiếu trả lời, thi full 105′ + 50′ hoặc từng 問題, chấm theo bảng đáp án, điểm ước tính, câu sai vào Điểm yếu; xem script sau khi chấm.
 
-## Nội dung bài tập (riêng tư)
-Repo **không** chứa tài liệu khóa học. Nội dung (`content-n2.json`) và file nghe được tải lên một lần từ laptop
-(Cài đặt → Tài liệu khóa học → chọn thư mục khóa học) và lưu trên D1 (hoặc R2 nếu gắn bucket `AUDIO`), chỉ máy đã ghép mới đọc được.
+## Chạy offline (dữ liệu nằm trên máy)
+- **Nhập tài liệu**: Cài đặt → Tài liệu khóa học → chọn thư mục có `content-*.json` + MP3/PDF. Nội dung và file được lưu thẳng vào trình duyệt (IndexedDB), **không cần mạng, không cần bật đồng bộ**.
+- Trình xem PDF (pdf.js 3.11.174, cmaps) nằm sẵn trong `public/vendor/pdfjs/`, service worker lưu sẵn → mở đề khi mất mạng.
+- **Sao lưu**: Cài đặt → Sao lưu → Xuất file (chỉ tiến độ). Nhập = gộp, không ghi đè.
+- Repo **không** chứa tài liệu khóa học. Khi bật đồng bộ, nội dung (JSON) cũng gửi lên D1 để điện thoại tải về; file nghe/đề chỉ gửi lên R2 khi tick "Cũng tải file lên cloud".
 
 ## Đồng bộ (Cloudflare Worker + D1)
 1. Máy đầu: **Cài đặt → Đồng bộ → Bật đồng bộ (máy đầu tiên)**, lưu mã khôi phục.
@@ -28,7 +30,9 @@ API: `/api/sync`, `/api/content`, `/api/audio[/<id>]` (cần khóa), `/api/repor
 src/data.js      dạng bài, mẹo, cấu trúc đề (không có nội dung khóa học)
 src/core.js      tiện ích, trạng thái, điều hướng, FSRS, đếm giờ học
 src/sync.js      gộp dữ liệu, đồng bộ Cloudflare, ghép máy
+src/store.js     lưu trên máy (IndexedDB): nội dung + file nghe/đề
 src/content.js   tải nội dung + file nghe, trình phát, nhập tài liệu
+src/backup.js    xuất/nhập file sao lưu tiến độ
 src/practice.js  luyện nghe, luyện đọc, ghi lần làm, lưu cụm
 src/views.js     điểm yếu, ôn nhanh, hôm nay, cài đặt, báo cáo tuần
 src/exam.js      đề thật các năm: trình xem PDF (pdf.js), phiếu trả lời, chấm
