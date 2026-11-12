@@ -242,6 +242,6 @@ function passageHTML(p, open) {
 function noContent() {
   const pc = devMode() === 'pc';
   return `<section class="panel"><h2>Chưa có tài liệu ${curLv()}</h2>${lvSwitchHTML()}
-    <p>${CF.cfg ? (pc ? 'Vào Cài đặt → Tài liệu khóa học → chọn thư mục tài liệu của cấp này để tải nội dung và file nghe lên (làm một lần).' : 'Nhập tài liệu trên laptop một lần (Cài đặt → Tài liệu khóa học); điện thoại sẽ tự tải về khi đồng bộ.') : 'Bật đồng bộ ở mục Cài đặt trước, rồi nhập tài liệu trên laptop.'}</p>
+    <p>${pc ? 'Vào Cài đặt → Tài liệu khóa học → chọn thư mục tài liệu của cấp này (làm một lần, không cần mạng).' : CF.cfg ? 'Nhập tài liệu trên laptop một lần; điện thoại sẽ tự tải nội dung về khi đồng bộ.' : 'Nhập tài liệu ở Cài đặt → Tài liệu khóa học.'}</p>
     <div class="row"><a class="btn pri" href="#plan">Mở Cài đặt</a>${CF.cfg ? '<button class="btn" data-a="contentRefresh">Kiểm tra lại</button>' : ''}</div></section>`;
 }

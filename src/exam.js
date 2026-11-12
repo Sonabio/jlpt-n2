@@ -28,17 +28,17 @@ indexContent();
 function exQName(e, md) { const p = PART(md, exLv(e)); return p ? `${PPS(p)} 問題${p.no}`.trim() : '問題' + md; }
 function itemLabel(it) { return it.kind === 'X' ? `Đề ${EXAM(it.exam) ? EXAM(it.exam).title : it.exam} · ${it.lis ? '聴解 問題' + it.md + ' 番' + it.label : exQName(EXAM(it.exam), it.md) + ' câu ' + it.label}` : `${setTitle(SET[it.set])} · ${it.kind === 'L' ? 'câu ' + it.n : 'đọc'}`; }
 
-/* ----- pdf.js (tải khi cần) ----- */
-const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+/* ----- pdf.js 3.11.174 (nằm sẵn trong app, chạy offline) ----- */
+const PDFJS = 'vendor/pdfjs/';
 let pdfLib = null; const PDFDOC = {};
 function loadPdfJs() {
   if (pdfLib) return Promise.resolve(pdfLib);
-  return new Promise((res, rej) => { const s = document.createElement('script'); s.src = PDFJS + 'pdf.min.js'; s.onload = () => { pdfLib = window.pdfjsLib; pdfLib.GlobalWorkerOptions.workerSrc = PDFJS + 'pdf.worker.min.js'; res(pdfLib); }; s.onerror = () => rej(new Error('Không tải được trình xem PDF (cần mạng)')); document.head.appendChild(s); });
+  return new Promise((res, rej) => { const s = document.createElement('script'); s.src = PDFJS + 'pdf.min.js'; s.onload = () => { pdfLib = window.pdfjsLib; pdfLib.GlobalWorkerOptions.workerSrc = PDFJS + 'pdf.worker.min.js'; res(pdfLib); }; s.onerror = () => rej(new Error('Không tải được trình xem PDF')); document.head.appendChild(s); });
 }
 async function pdfDoc(asset) {
   if (PDFDOC[asset]) return PDFDOC[asset];
   const lib = await loadPdfJs(), url = await mediaUrl(asset);
-  PDFDOC[asset] = lib.getDocument({ url, rangeChunkSize: 262144 }).promise.catch(e => { delete PDFDOC[asset]; throw e; });
+  PDFDOC[asset] = lib.getDocument({ url, rangeChunkSize: 262144, cMapUrl: PDFJS + 'cmaps/', cMapPacked: true, standardFontDataUrl: PDFJS + 'standard_fonts/' }).promise.catch(e => { delete PDFDOC[asset]; throw e; });
   return PDFDOC[asset];
 }
 let PV = { asset: null, page: 1, n: 0, zoom: 1, busy: false, err: '' };

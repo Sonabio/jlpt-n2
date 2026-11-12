@@ -26,7 +26,21 @@ function setTitle(s) { return s.title || (s.src === 'f-' ? `Nền tảng · Chư
 const PPS = p => p.sec === 'R' ? '読解' : LVD().papers.length > 2 ? (p.pp ? '文法' : '文字語彙') : '';
 function typeName(t) { if (t[0] === 'L') return `聴解 問題${t[1]} ${MDL()[t[1]].ja}`; if (t[0] === 'K') { const p = PART(t.slice(1)); return `${PPS(p)} 問題${p.no} ${p.ja}`.trim(); } return `読解 ${t.slice(1)}`; }
 function typeVi(t) { if (t[0] === 'L') return `Nghe ${t[1]} · ${MDL()[t[1]].vi}`; if (t[0] === 'K') { const p = PART(t.slice(1)); return `${p.pp || (LVD().papers.length < 3 && p.md >= 7) ? 'Ngữ pháp' : 'Từ vựng'} · ${p.vi}`; } return `Đọc · ${RTL()[t.slice(1)].vi}`; }
+/* Nội dung lưu trên máy: IndexedDB (bản cũ trong localStorage được chuyển sang rồi xóa để giải phóng chỗ) */
 function loadContentLocal() { SLOTS.forEach(k => { try { const r = localStorage.getItem(CK(k)); if (r) CS[k] = JSON.parse(r); } catch (e) { } }); buildC(); }
+async function saveContentLocal(k) { await DB.put('content', k, CS[k]); try { localStorage.removeItem(CK(k)); } catch (e) { } }
+async function loadContentDB() {
+  let changed = false;
+  for (const k of SLOTS) {
+    try {
+      const v = await DB.get('content', k);
+      if (v && (!CS[k] || (v.upd || 0) >= (CS[k].upd || 0))) { CS[k] = v; changed = true; }
+      else if (CS[k]) await saveContentLocal(k);
+    } catch (e) { }
+  }
+  if (changed) buildC();
+  return changed;
+}
 async function fetchContent(force) {
   if (!CF.cfg) return false;
   let got = false;
@@ -34,7 +48,7 @@ async function fetchContent(force) {
     try {
       const q = [k === 'main' ? '' : 'slot=' + k, CS[k] && !force ? 'since=' + (CS[k].upd || 0) : ''].filter(Boolean).join('&');
       const r = await CF.call('/content' + (q ? '?' + q : ''));
-      if (r && r.data) { CS[k] = JSON.parse(r.data); CS[k].upd = r.upd; try { localStorage.setItem(CK(k), JSON.stringify(CS[k])); } catch (e) { } got = true; }
+      if (r && r.data) { CS[k] = JSON.parse(r.data); CS[k].upd = r.upd; try { await saveContentLocal(k); } catch (e) { } got = true; }
     } catch (e) { }
   }
   if (got) buildC();
@@ -46,9 +60,10 @@ loadContentLocal();
 const AU = { el: null, url: null, id: null, plays: 0, loading: false, rate: 1, tts: null };
 const ACACHE = 'jlpt-audio-v1';
 async function audioBlob(id) {
+  const own = await fileGet(id); if (own) return own;          // 1) file đã nhập vào máy này
   const key = location.origin + '/__audio/' + encodeURIComponent(id);
   try { const c = await caches.open(ACACHE); const hit = await c.match(key); if (hit) return await hit.blob(); } catch (e) { }
-  if (!CF.cfg) throw new Error('Máy này chưa ghép đồng bộ nên chưa tải được file nghe.');
+  if (!CF.cfg) throw new Error('Chưa có file nghe này trên máy. Cài đặt → Tài liệu khóa học → chọn thư mục tài liệu.');
   const r = await fetch('/api/audio/' + encodeURIComponent(id), { headers: { authorization: 'Bearer ' + CF.cfg.key, 'x-device': DEV } });
   if (r.status === 404) throw new Error('Chưa có file nghe cho câu này. Vào Cài đặt → Nhập tài liệu.');
   if (!r.ok) throw new Error('Không tải được file nghe (HTTP ' + r.status + ')');
@@ -138,27 +153,35 @@ function exFiles(e) {
 }
 let MTOK = null;
 async function mediaUrl(id) {
+  const own = await fileGet(id); if (own) return blobUrl(id, own);   // file trên máy: chạy offline
+  if (!CF.cfg) { const e = new Error('Chưa có file này trên máy. Cài đặt → Tài liệu khóa học → chọn thư mục tài liệu'); e.status = 404; throw e; }
   if (!MTOK || MTOK.exp - Date.now() < 600000) MTOK = await CF.call('/media-token', { method: 'POST' });
   return '/api/audio/' + encodeURIComponent(id) + '?t=' + encodeURIComponent(MTOK.t);
 }
-/* ----- Nhập tài liệu: chọn thư mục khóa học (có content-n2.json + file MP3) ----- */
-let IMP = { busy: false, msg: '', done: 0, total: 0, skip: 0, fail: [], have: null };
+/* ----- Nhập tài liệu: chọn thư mục (có content-*.json + MP3/PDF) → lưu thẳng vào máy này.
+   Đã bật đồng bộ thì nội dung (JSON nhỏ) cũng được gửi lên cloud để điện thoại tải về; file lớn chỉ gửi khi tick "Cũng tải file lên cloud". */
+let IMP = { busy: false, msg: '', done: 0, total: 0, skip: 0, fail: [], have: null, cloud: false, est: null };
 async function audioHave() { try { const r = await CF.call('/audio'); IMP.have = new Set(r.ids || []); } catch (e) { IMP.have = null; } return IMP.have; }
+const nItemsOf = c => (c.sets || []).reduce((a, s) => a + (s.items || []).length, 0);
 async function importFolder(files) {
-  if (!CF.cfg) { toast('Bật đồng bộ trước (mục Đồng bộ bên dưới)'); return; }
-  files = [...files]; IMP = { busy: true, msg: 'Đang đọc thư mục…', done: 0, total: 0, skip: 0, fail: [], have: IMP.have }; render();
+  files = [...files]; IMP = { ...IMP, busy: true, msg: 'Đang đọc thư mục…', done: 0, total: 0, skip: 0, fail: [], err: '' }; render();
   try {
     const jfs = files.filter(f => /^content-[a-z0-9]+\.json$/i.test(f.name));
-    const contents = [];
+    const bySlot = {};          // nếu có 2 file cùng loại (bản cũ + bản mới) thì lấy bản nhiều câu hơn
     for (const jf of jfs) {
       const txt = await jf.text(), content = JSON.parse(txt);
       if (!content.sets) throw new Error('File ' + jf.name + ' không đúng định dạng');
       const slot = SLOTS.includes(content.slot) ? content.slot : 'main';
-      IMP.msg = 'Đang tải nội dung bài tập lên…'; render();
-      await CF.call('/content' + (slot === 'main' ? '' : '?slot=' + slot), { method: 'PUT', body: { data: txt } });
+      if (!bySlot[slot] || nItemsOf(content) > nItemsOf(bySlot[slot].content)) bySlot[slot] = { content, txt };
+    }
+    const contents = [];
+    for (const [slot, { content, txt }] of Object.entries(bySlot)) {
+      IMP.msg = 'Đang lưu nội dung bài tập vào máy…'; render();
+      CS[slot] = content; CS[slot].upd = Date.now(); await saveContentLocal(slot);
+      if (CF.cfg) { try { await CF.call('/content' + (slot === 'main' ? '' : '?slot=' + slot), { method: 'PUT', body: { data: txt } }); } catch (e) { IMP.err = 'Chưa gửi được nội dung lên cloud: ' + (e.message || e); } }
       contents.push(content);
     }
-    if (jfs.length) await fetchContent(true);
+    if (contents.length) buildC();
     else if (allSets().length || allExams().length) contents.push({ sets: allSets(), exams: allExams() });
     if (!contents.length) throw new Error('Không thấy file content-*.json trong thư mục đã chọn.');
     const norm = s => s.normalize('NFC').replace(/\\/g, '/').toLowerCase();
@@ -169,45 +192,65 @@ async function importFolder(files) {
       content.sets.forEach(s => s.items.forEach(it => { if (!it.audio) return; const f = find(it.audio); if (f) jobs.push([it.id, f, 'audio/mpeg']); }));
       (content.exams || []).forEach(e => exFiles(e).forEach(([k, rel, type]) => { const f = find(rel); if (f) jobs.push([exAsset(e.id, k), f, type]); }));
     });
-    await audioHave();
-    const todo = jobs.filter(([id]) => !(IMP.have && IMP.have.has(id)));
+    await localFilesLoad();
+    const todo = jobs.filter(([id]) => !LF.has(id));
     IMP.total = jobs.length; IMP.skip = jobs.length - todo.length;
-    if (!jobs.length) IMP.msg = 'Không thấy file khớp. Hãy chọn đúng thư mục tài liệu (xem danh sách bên dưới).';
-    let i = 0;
-    const worker = async () => { // 2 luồng song song
-      while (i < todo.length) {
-        const [id, f, type] = todo[i++];
-        try {
-          const r = await fetch('/api/audio/' + encodeURIComponent(id), { method: 'PUT', body: f.size > 20e6 ? f : await f.arrayBuffer(), headers: { 'content-type': type, authorization: 'Bearer ' + CF.cfg.key, 'x-device': DEV } });
-          if (!r.ok) { let m = 'HTTP ' + r.status; try { m = (await r.json()).message || m; } catch (e) { } throw new Error(m); }
-        } catch (e) { IMP.fail.push(id); IMP.err = e.message || String(e); }
-        IMP.done++; IMP.msg = `Đang tải file ${IMP.done}/${todo.length}… (đề + file nghe lớn có thể mất vài phút)`; const p = $('#impmsg'); if (p) p.textContent = IMP.msg;
-      }
-    };
-    await Promise.all([worker(), worker()]);
-    await audioHave();
-    IMP.msg = jobs.length ? `Xong: ${todo.length - IMP.fail.length} file mới, ${IMP.skip} file đã có${IMP.fail.length ? `, ${IMP.fail.length} lỗi: ${IMP.err} (bấm chọn lại thư mục để thử tiếp)` : ''}.` : IMP.msg;
+    if (!jobs.length) IMP.msg = 'Không thấy file khớp. Hãy chọn đúng thư mục tài liệu (xem hướng dẫn bên dưới).';
+    if (todo.length) await askPersist();
+    for (const [id, f, type] of todo) {          // lần lượt từng file để không tốn bộ nhớ
+      try { await filePut(id, new Blob([await f.arrayBuffer()], { type }), type); }
+      catch (e) { IMP.fail.push(id); IMP.err = /quota/i.test(String(e && (e.name || e.message))) ? 'Ổ đĩa/trình duyệt hết chỗ' : (e.message || String(e)); }
+      IMP.done++; IMP.msg = `Đang lưu file vào máy ${IMP.done}/${todo.length}…`; const p = $('#impmsg'); if (p) p.textContent = IMP.msg;
+    }
+    let up = 0;
+    if (CF.cfg && IMP.cloud && jobs.length) up = await cloudUpload(jobs);
+    IMP.est = await storageInfo();
+    IMP.msg = jobs.length ? `Xong: lưu ${todo.length - IMP.fail.length} file mới vào máy, ${IMP.skip} file đã có${up ? `, gửi ${up} file lên cloud` : ''}${IMP.fail.length ? `. ${IMP.fail.length} file lỗi: ${IMP.err}` : ''}.` : IMP.msg;
+    if (IMP.err && !IMP.fail.length) IMP.msg += ' ' + IMP.err;
   } catch (e) { IMP.msg = 'Lỗi: ' + (e.message || e); }
   IMP.busy = false; render();
 }
+async function cloudUpload(jobs) {
+  await audioHave();
+  const todo = jobs.filter(([id]) => !(IMP.have && IMP.have.has(id)));
+  let i = 0, ok = 0;
+  const worker = async () => { // 2 luồng song song
+    while (i < todo.length) {
+      const [id, f, type] = todo[i++];
+      try {
+        const r = await fetch('/api/audio/' + encodeURIComponent(id), { method: 'PUT', body: f.size > 20e6 ? f : await f.arrayBuffer(), headers: { 'content-type': type, authorization: 'Bearer ' + CF.cfg.key, 'x-device': DEV } });
+        if (!r.ok) { let m = 'HTTP ' + r.status; try { m = (await r.json()).message || m; } catch (e) { } throw new Error(m); }
+        ok++;
+      } catch (e) { IMP.fail.push(id); IMP.err = e.message || String(e); }
+      IMP.msg = `Đang gửi file lên cloud ${ok}/${todo.length}…`; const p = $('#impmsg'); if (p) p.textContent = IMP.msg;
+    }
+  };
+  await Promise.all([worker(), worker()]);
+  await audioHave();
+  return ok;
+}
 function importUI() {
   const S0 = allSets(), E0 = allExams(), any = S0.length || E0.length;
-  const nItems = S0.reduce((a, s) => a + s.items.length, 0), nAudio = S0.reduce((a, s) => a + s.items.filter(i => i.audio).length, 0);
-  const nEx = E0.length, exHave = nEx && IMP.have ? E0.filter(e => exFiles(e).every(([k]) => IMP.have.has(exAsset(e.id, k)))).length : 0;
+  const nItems = S0.reduce((a, s) => a + s.items.length, 0), audIds = S0.flatMap(s => s.items.filter(i => i.audio).map(i => i.id)), nAudio = audIds.length;
+  const nEx = E0.length, exLocal = E0.filter(e => exFiles(e).every(([k]) => LF.has(exAsset(e.id, k)))).length, audLocal = audIds.filter(id => LF.has(id)).length;
+  const exCloud = nEx && IMP.have ? E0.filter(e => exFiles(e).every(([k]) => IMP.have.has(exAsset(e.id, k)))).length : 0;
   const byLv = LVS.map(l => { const n = S0.filter(s => lvOf(s) === l).reduce((a, s) => a + s.items.length, 0), x = E0.filter(e => lvOf(e) === l).length; return n || x ? `${l}: ${n} câu luyện, ${x} đề` : ''; }).filter(Boolean).join(' · ');
+  const est = IMP.est;
   return `<div class="gist">
     <p><b>Tài liệu</b> ${any ? `<span class="tag on">${nItems} câu · ${nAudio} file nghe${nEx ? ` · ${nEx} đề thi` : ''}</span>` : '<span class="tag">chưa có</span>'}</p>
     ${byLv ? `<p class="hint">${byLv}</p>` : ''}
-    <p class="hint">Nội dung và file nghe được lưu riêng trên máy chủ của bạn (D1/R2), chỉ máy đã ghép mới tải được; không nằm trên GitHub.</p>
-    ${CF.cfg ? `<label class="btn ${any ? '' : 'pri'}" ${IMP.busy ? 'aria-disabled="true"' : ''}>Chọn thư mục tài liệu…<input type="file" id="impdir" webkitdirectory directory multiple hidden data-a="impPick" ${IMP.busy ? 'disabled' : ''}></label>
-    <p class="hint">Trên laptop, chọn lần lượt từng thư mục: <b>2.DMR-TÀI LIỆU HỌC VIÊN</b>, <b>N2_ĐỀ CÁC NĂM</b> (N2) và <b>JLPT_CHINH_THUC_N3-N5</b> (N3–N5). Mỗi thư mục có sẵn file content-….json. File đã tải lên sẽ được bỏ qua.</p>` : '<p class="hint">Bật đồng bộ trước rồi mới nhập được.</p>'}
-    ${IMP.have ? `<p class="hint">Trên máy chủ: ${[...IMP.have].filter(x => x[0] !== 'x').length}/${nAudio} file nghe bài tập${nEx ? ` · ${exHave}/${nEx} đề đủ file (đề + script + nghe)` : ''}.</p>` : ''}
+    ${any ? `<p class="hint"><b>Trên máy này (dùng được khi không có mạng):</b> ${audLocal}/${nAudio} file nghe bài tập${nEx ? ` · ${exLocal}/${nEx} đề đủ file` : ''}${est && est.used ? ` · chiếm ${fmtMB(est.used)}${est.persisted ? ' · đã khóa không cho trình duyệt tự xóa' : ''}` : ''}.</p>` : ''}
+    <label class="btn ${any ? '' : 'pri'}" ${IMP.busy ? 'aria-disabled="true"' : ''}>Chọn thư mục tài liệu…<input type="file" id="impdir" webkitdirectory directory multiple hidden data-a="impPick" ${IMP.busy ? 'disabled' : ''}></label>
+    ${CF.cfg ? `<label class="hint"><input type="checkbox" data-a="impCloud" ${IMP.cloud ? 'checked' : ''}> Cũng tải file nghe/đề lên cloud (chỉ cần khi cài máy mới; chậm)</label>` : ''}
+    <p class="hint">Trên laptop chọn thư mục chứa tài liệu (có file content-….json), ví dụ <b>N2_ĐỀ CÁC NĂM</b>, <b>2.DMR-TÀI LIỆU HỌC VIÊN</b>, <b>JLPT_CHINH_THUC_N3-N5</b>; hoặc chọn một thư mục cha chứa tất cả. File đã có sẽ được bỏ qua. Không cần mạng.</p>
+    ${IMP.have ? `<p class="hint">Trên cloud: ${[...IMP.have].filter(x => x[0] !== 'x').length}/${nAudio} file nghe bài tập${nEx ? ` · ${exCloud}/${nEx} đề đủ file` : ''}.</p>` : ''}
     ${IMP.msg ? `<p id="impmsg" class="${IMP.msg.startsWith('Lỗi') ? 'bad-t' : ''}">${esc(IMP.msg)}</p>` : ''}
-    ${any && CF.cfg ? '<div class="row"><button class="btn ghost sm" data-a="contentRefresh">Tải lại nội dung từ máy chủ</button><button class="btn ghost sm" data-a="audioClear">Xóa file nghe đã lưu tạm trên máy này</button></div>' : ''}
+    ${any ? `<div class="row">${CF.cfg ? '<button class="btn ghost sm" data-a="contentRefresh">Tải lại nội dung từ cloud</button>' : ''}<button class="btn ghost sm" data-a="audioClear">Xóa file nghe tạm (tải từ cloud)</button></div>` : ''}
   </div>`;
 }
 Object.assign(ACT, {
   impPick(t) { if (t.files && t.files.length) importFolder(t.files); },
-  async contentRefresh() { const ok = await fetchContent(true); toast(ok ? 'Đã tải lại nội dung' : 'Chưa có nội dung trên máy chủ'); render(); },
-  async audioClear() { try { await caches.delete(ACACHE); toast('Đã xóa file nghe lưu tạm'); } catch (e) { } },
+  impCloud(t) { IMP.cloud = !!t.checked; },
+  async contentRefresh() { const ok = await fetchContent(true); toast(ok ? 'Đã tải lại nội dung' : 'Chưa có nội dung mới trên cloud'); render(); },
+  async audioClear() { try { await caches.delete(ACACHE); toast('Đã xóa file nghe tạm'); } catch (e) { } },
 });
