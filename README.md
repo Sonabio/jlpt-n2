@@ -1,46 +1,38 @@
-# Lộ trình JLPT N2
+# Luyện đề JLPT N2
 
-App học và ôn thi tiếng Nhật từ con số 0 đến JLPT N2, chạy như PWA trên điện thoại và máy tính.
+Web luyện đề **nghe** và **đọc** JLPT N2. Máy tính để luyện chính; điện thoại chỉ ôn lại phần yếu đã được phân tích.
 
 **Mở app:** https://jlpt-n2.mylifegame-platform.workers.dev/ (Cloudflare, tự deploy mỗi lần push lên `main`)
 
 ## Tính năng
-- **Dữ liệu N5–N1:** 2.211 kanji (có Hán-Việt), 8.034 từ vựng, ngữ pháp N5–N1 (~360 mẫu). Xem `ATTRIBUTION.md`.
-- **Học (luồng chính):** Học mới → Nghe → Chọn đáp án → Gõ đáp án; tự chấm vào lịch ôn FSRS. Điện thoại ưu tiên từ vựng + kanji; laptop ưu tiên ngữ pháp.
-- **Luyện gõ:** hướng dẫn bộ gõ tiếng Nhật (Windows, macOS, iPhone, Android), gõ từ ra kanji, nghe rồi gõ, gõ câu; đo độ chính xác và ký tự/phút. Tùy chọn tự đổi romaji → kana.
-- **Ôn thẻ (FSRS-4.5):** có chế độ gõ đáp án trước khi lật.
-- **Hôm nay:** kế hoạch 2 giờ theo thiết bị, phút học tự đếm, báo cáo tuần (mục tiêu 840 phút).
-- **Kiểm tra trình độ, Luyện tập (10 dạng), Tra cứu, Thi thử, Kế hoạch** như trước.
-- **Đồng bộ:** GitHub Gist (`jlpt-n2-progress.json` + `jlpt-n2-weekly.json` cho báo cáo tự động).
+- **Luyện nghe** theo bộ (Chặng nền tảng C1–9, Chặng 2 bài 1–10) hoặc theo dạng 問題1–5. Trình phát có lùi 5s, tốc độ 0.85–1.15×, đếm số lần nghe. Dạng 3/4/5 mặc định chỉ hiện số như đề thật.
+- **Luyện đọc** theo bài hoặc theo dạng (短文, 中文, 長文, 統合理解, 情報検索), bấm giờ theo mục tiêu từng dạng.
+- Sau mỗi câu: đáp án, script (tô câu chứa đáp án), chọn **lý do sai**, bôi đen cụm chưa biết để **lưu thành thẻ**.
+- **Điểm yếu**: % đúng theo dạng (lần đầu / lần gần nhất), thời gian, lý do sai hay gặp, gợi ý việc nên làm; câu sai được lặp lại 1 → 3 → 7 → 21 ngày.
+- **Ôn nhanh** (điện thoại): thẻ cụm từ (FSRS) + câu sai đến hạn (câu nghe có thể đọc script thay vì nghe).
+- **Thi thử**: đồng hồ 105′ + 50′, nhập điểm, chấm đỗ/trượt.
 
-## Cài lên máy
-- **iPhone (Safari):** mở link → nút Chia sẻ → *Thêm vào MH chính*.
-- **Android (Chrome):** mở link → menu ⋮ → *Cài đặt ứng dụng*.
-- **Máy tính (Chrome/Edge):** biểu tượng cài đặt ở thanh địa chỉ.
+## Nội dung bài tập (riêng tư)
+Repo **không** chứa tài liệu khóa học. Nội dung (`content-n2.json`) và file nghe được tải lên một lần từ laptop
+(Cài đặt → Tài liệu khóa học → chọn thư mục khóa học) và lưu trên D1 (hoặc R2 nếu gắn bucket `AUDIO`), chỉ máy đã ghép mới đọc được.
 
-## Đồng bộ giữa các thiết bị (Cloudflare Worker + D1)
-Tiến độ luôn lưu trong trình duyệt (dùng được offline) và gộp lên D1 qua `/api/sync`.
-1. Máy đầu tiên: **Kế hoạch → Cài đặt và đồng bộ → Bật đồng bộ (máy đầu tiên)**. Lưu lại **mã khôi phục**.
-2. Máy thứ hai: trên máy đầu bấm **Ghép thêm máy** → nhập mã 8 ký tự (hoặc quét QR) trên máy thứ hai.
-3. Dữ liệu gộp theo từng thẻ (giữ lần ôn mới nhất), nhật ký học lưu riêng từng máy rồi cộng lại, nên học offline trên cả hai máy không mất.
-4. **Đổi khóa** ngắt mọi máy khác; **mã khôi phục** lấy lại quyền khi mất hết máy.
+## Đồng bộ (Cloudflare Worker + D1)
+1. Máy đầu: **Cài đặt → Đồng bộ → Bật đồng bộ (máy đầu tiên)**, lưu mã khôi phục.
+2. Máy khác: **Ghép thêm máy** → nhập mã 8 ký tự hoặc quét QR.
+3. Lần làm bài gộp theo thời điểm, thẻ cụm từ theo id, nhật ký thời gian theo từng máy.
 
-Chỉ một người dùng: không gian đồng bộ đầu tiên là chủ, máy khác chỉ vào được bằng mã ghép. Khóa chỉ lưu dưới dạng SHA-256 trên D1.
-`/api/report/<mã>` trả về thống kê tuần cho lịch báo cáo tự động (mã không nằm trong repo).
+API: `/api/sync`, `/api/content`, `/api/audio[/<id>]` (cần khóa), `/api/report/<mã>` (thống kê tuần cho lịch báo cáo; mã không nằm trong repo).
 
 ## Cấu trúc
 ```
-src/data.js     nội dung (từ JLPT_N2_tong_hop.md)
-src/app.js      logic, FSRS, quiz, thẻ của mình, đồng bộ
-src/placement.js  bài kiểm tra trình độ
-src/flow.js     luồng học, luyện gõ, thiết bị, báo cáo tuần
-src/boot.js     khởi động
-data/*.js       dữ liệu kanji, từ vựng (sinh bằng tools/build_data.py)
-src/sync.js     gộp dữ liệu, đồng bộ Cloudflare, ghép máy
-src/head.html   giao diện (CSS + khung trang)
-build.sh        ghép thành public/index.html (PWA) và artifact.html (bản claude.ai)
-worker/index.js Worker: phục vụ public/ + API đồng bộ trên D1
-wrangler.jsonc  cấu hình Worker (tên jlpt-n2, binding DB)
-public/         file tĩnh: index.html, sw.js, manifest, icons/, data/, vendor/qrcode.js
+src/data.js      dạng bài, mẹo, cấu trúc đề (không có nội dung khóa học)
+src/core.js      tiện ích, trạng thái, điều hướng, FSRS, đếm giờ học
+src/sync.js      gộp dữ liệu, đồng bộ Cloudflare, ghép máy
+src/content.js   tải nội dung + file nghe, trình phát, nhập tài liệu
+src/practice.js  luyện nghe, luyện đọc, ghi lần làm, lưu cụm
+src/views.js     điểm yếu, ôn nhanh, hôm nay, thi thử, cài đặt, báo cáo tuần
+src/head.html    giao diện
+build.sh         ghép thành public/index.html
+worker/index.js  Worker: file tĩnh + API (D1, R2 tùy chọn)
 ```
-Sửa trong `src/`, chạy `./build.sh`, rồi commit cả `public/index.html`. Khi đổi nội dung, tăng `VERSION` trong `sw.js`.
+Sửa trong `src/`, chạy `./build.sh`, commit cả `public/index.html`. Khi đổi giao diện, tăng `VERSION` trong `public/sw.js`.

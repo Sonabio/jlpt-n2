@@ -1,7 +1,7 @@
 {
-  "name": "Lộ trình JLPT N2",
+  "name": "Luyện đề JLPT N2",
   "short_name": "JLPT N2",
-  "description": "Học và ôn thi tiếng Nhật từ con số 0 đến JLPT N2: thẻ ôn ngắt quãng, quiz, tra cứu, thi thử.",
+  "description": "Luyện đề nghe, đọc JLPT N2 trên máy tính; ôn phần yếu trên điện thoại.",
   "lang": "vi",
   "start_url": "./#today",
   "scope": "./",
@@ -15,7 +15,7 @@
     { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Ôn thẻ", "url": "./#review", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Ôn nhanh", "url": "./#drill", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "Thi thử", "url": "./#exam", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }

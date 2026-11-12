@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ghép src/ thành index.html (PWA) và artifact.html (bản dán vào claude.ai Artifact)
+# Ghép src/ thành public/index.html (PWA). Không chứa nội dung tài liệu khóa học.
 set -euo pipefail
 cd "$(dirname "$0")"
 HEAD_PART=$(sed '/<div class="app">/,$d' src/head.html)
@@ -14,11 +14,8 @@ BODY_PART=$(sed -n '/<div class="app">/,$p' src/head.html)
   echo "$HEAD_PART"
   echo '</head><body>'
   echo "$BODY_PART"
-  echo '<script src="data/kanji.js"></script><script src="data/vocab.js"></script>'
-  echo '<script>'; cat src/data.js; echo '</script>'
-  echo '<script>'; cat src/app.js src/placement.js src/flow.js src/sync.js src/boot.js; echo '</script>'
+  echo '<script>'; cat src/data.js src/core.js src/sync.js src/content.js src/practice.js src/views.js src/boot.js; echo '</script>'
   echo "<script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}</script>"
   echo '</body></html>'
 } > public/index.html
-{ cat src/head.html; echo '<script src="data/kanji.js"></script><script src="data/vocab.js"></script>'; echo '<script>'; cat src/data.js; echo '</script>'; echo '<script>'; cat src/app.js src/placement.js src/flow.js src/sync.js src/boot.js; echo '</script>'; } > artifact.html
-echo "Built public/index.html ($(wc -c < public/index.html) bytes), artifact.html"
+echo "Built public/index.html ($(wc -c < public/index.html) bytes)"

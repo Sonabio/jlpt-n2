@@ -1,4 +1,4 @@
-<title>Lộ trình JLPT N2</title>
+<title>Luyện đề JLPT N2</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -366,6 +366,66 @@ code.big { display: inline-block; font-size: 1.1rem; letter-spacing: .06em; padd
 .devrow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: space-between; border-bottom: 1px solid var(--line); padding-block: 6px; font-size: .9rem; }
 .foot { font-size: .78rem; text-align: center; }
 
+/* luyện đề */
+.sets { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 10px; }
+.mdgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); gap: 10px; }
+.mdc { border: 1px solid var(--line); border-radius: var(--r); padding: 12px; display: flex; flex-direction: column; gap: 4px; font-size: .88rem; }
+.mdc .btn { margin-top: 6px; align-self: flex-start; }
+.player { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 44px; }
+.player .play { width: 48px; height: 48px; border-radius: 50%; padding: 0; font-size: 1.05rem; }
+.ptrack { flex: 1 1 160px; height: 8px; background: var(--grid); border-radius: 99px; cursor: pointer; position: relative; overflow: hidden; }
+.ptrack i { position: absolute; inset: 0 auto 0 0; background: var(--ai); border-radius: 99px; pointer-events: none; }
+.player select { padding: 4px 6px; font-size: .85rem; }
+.plays { font-size: .8rem; }
+.bad-t { color: var(--bad); }
+.tipbox { background: var(--ai-soft); border-radius: 8px; padding: 10px 12px; font-size: .9rem; }
+.lqtext { font-size: 1.08rem; line-height: 1.8; background: var(--bg); border-radius: 8px; padding: 10px 12px; }
+.lq { display: flex; flex-direction: column; gap: 6px; }
+.nopts { display: flex; gap: 10px; flex-wrap: wrap; }
+.nopts .opt { min-width: 64px; justify-content: center; }
+.nopts .opt .ok-n { width: 28px; height: 28px; font-size: .95rem; }
+.opts.one { grid-template-columns: 1fr; }
+.opt.sel { border-color: var(--ai); background: var(--ai-soft); }
+.scriptd summary { cursor: pointer; }
+.script, .passage { font-size: 1.02rem; line-height: 1.85; background: var(--bg); border-radius: 8px; padding: 10px 14px; text-align: left; }
+.script .sl, .passage .sl { margin: 0; }
+.script .sq { color: var(--muted); font-size: .92rem; margin-bottom: 4px; }
+.script .key { background: var(--good-soft); border-radius: 4px; box-shadow: -6px 0 0 var(--good-soft), 6px 0 0 var(--good-soft); }
+.pimgs { display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 220px); overflow-y: auto; }
+.pimgs img { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+@media (prefers-color-scheme: dark) { .pimgs img { filter: invert(.88) hue-rotate(180deg); } }
+.phrbox { display: flex; gap: 8px; flex-wrap: wrap; }
+.phrbox input { flex: 1 1 200px; }
+.whyrow { display: flex; flex-direction: column; gap: 6px; }
+.rgrid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.rgrid > .panel:first-child .passage { max-height: calc(100vh - 220px); overflow-y: auto; }
+.rqs { position: sticky; top: 12px; }
+.rq { display: flex; flex-direction: column; gap: 8px; padding-bottom: 12px; border-bottom: 1px dashed var(--line); }
+.rqq { font-size: 1rem; line-height: 1.7; }
+#rtimer { font-weight: 600; color: var(--ai); }
+#rtimer.late { color: var(--shu); }
+.adv { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.adv:last-child { border-bottom: 0; }
+.adv p { font-size: .88rem; }
+.todo { display: flex; flex-direction: column; }
+.trows { display: flex; flex-direction: column; gap: 10px; }
+.trow { display: grid; grid-template-columns: minmax(150px, 1.1fr) minmax(80px, 1.4fr) 92px minmax(120px, 1.3fr); gap: 12px; align-items: center; font-size: .88rem; }
+.tn { display: flex; flex-direction: column; } .tn small { font-size: .74rem; }
+.tv { text-align: right; } .td { font-size: .8rem; }
+.sbar i.good { background: var(--good); } .sbar i.warn { background: var(--warn); } .sbar i.bad { background: var(--bad); }
+.okc { color: var(--good); font-weight: 700; } .ngc { color: var(--bad); font-weight: 700; }
+.plist { display: flex; flex-direction: column; }
+.pli { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: .92rem; }
+@media (max-width: 860px) {
+  .rgrid { grid-template-columns: minmax(0, 1fr); }
+  .rgrid > .panel:first-child .passage { max-height: none; }
+  .rqs { position: static; }
+  .trow { grid-template-columns: 1fr 80px; }
+  .trow .sbar { grid-column: 1 / -1; grid-row: 2; }
+  .trow .td { grid-column: 1 / -1; }
+  .kpis.four { grid-template-columns: repeat(2, 1fr); }
+}
+
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--paper); padding: 9px 16px; border-radius: 8px; font-size: .9rem; z-index: 40; max-width: calc(100% - 32px); box-shadow: var(--shadow); }
 @media (min-width: 861px) { .toast { bottom: 24px; } }
 .copyfall { position: fixed; left: 16px; right: 16px; bottom: 140px; z-index: 41; height: 120px; }
@@ -373,7 +433,7 @@ code.big { display: inline-block; font-size: 1.1rem; letter-spacing: .06em; padd
 </style>
 <div class="app">
   <aside class="side">
-    <div class="brand"><span class="seal" lang="ja">合</span><div><b>Lộ trình JLPT N2</b><small>Sổ học của Son</small></div></div>
+    <div class="brand"><span class="seal" lang="ja">合</span><div><b>Luyện đề N2</b><small>Nghe · Đọc · Ôn phần yếu</small></div></div>
     <nav id="nav" class="nav" aria-label="Mục chính"></nav>
     <div class="syncmini"><span class="dot syncdot"></span><span id="syncshort">Lưu trên máy</span></div>
   </aside>

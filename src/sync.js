@@ -1,6 +1,6 @@
 /* ===== ĐỒNG BỘ: gộp dữ liệu giữa các máy + Cloudflare (Worker + D1) ===== */
 const DEV = (() => { try { let d = localStorage.getItem('jlpt-n2-dev'); if (!d) { d = Math.random().toString(36).slice(2, 10); localStorage.setItem('jlpt-n2-dev', d); } return d; } catch (e) { return 'nodev'; } })();
-const LOCAL_SET_KEYS = ['dev', 'romaji', 'typeRev'];
+const LOCAL_SET_KEYS = ['dev'];
 function devName() {
   const u = navigator.userAgent;
   const os = /iPhone/.test(u) ? 'iPhone' : /iPad/.test(u) ? 'iPad' : /Android/.test(u) ? 'Android' : /Mac/.test(u) ? 'Mac' : /Windows/.test(u) ? 'Windows' : /Linux/.test(u) ? 'Linux' : 'Máy';
@@ -9,40 +9,42 @@ function devName() {
   return os + ' · ' + (pwa ? 'app đã cài' : br);
 }
 
-/* Nhật ký học lưu riêng theo máy (S.dlog[máy][ngày]) rồi cộng lại thành S.log, để 2 máy cùng học một ngày không ghi đè nhau */
-function ensureDlog(st) { if (!st.dlog) { st.dlog = {}; if (st.log && Object.keys(st.log).length) st.dlog.legacy = JSON.parse(JSON.stringify(st.log)); } return st; }
+/* Nhật ký thời gian lưu riêng theo máy (S.dlog[máy][ngày]) rồi cộng lại thành S.log */
 function rebuildLog(st) {
   const out = {};
   Object.values(st.dlog || {}).forEach(days => Object.entries(days || {}).forEach(([d, l]) => { const o = out[d] || (out[d] = {}); Object.entries(l || {}).forEach(([f, v]) => { o[f] = (o[f] || 0) + (+v || 0); }); }));
   st.log = out; return st;
 }
-const srsCount = s => s.length === 7 ? (s[4] || 0) + (s[5] || 0) : (s[3] || 0) + (s[4] || 0);
-const srsLast = s => s.length === 7 ? (s[6] || 0) : (s[0] || 0) - (s[1] || 0);
-function pickSrs(x, y) { if (!x) return y; if (!y) return x; const a = srsCount(x), b = srsCount(y); if (a !== b) return a > b ? x : y; const la = srsLast(x), lb = srsLast(y); if (la !== lb) return la > lb ? x : y; return (x[0] || 0) >= (y[0] || 0) ? x : y; }
 function unionBy(a = [], b = [], key) { const m = new Map(); [...a, ...b].forEach(x => { const k = key(x); if (!m.has(k)) m.set(k, x); }); return [...m.values()]; }
+const phrReps = p => p && p.s ? (p.s[4] || 0) + (p.s[5] || 0) : -1;
+/* Gộp 2 bản dữ liệu: lần làm bài gộp theo thời điểm, cụm từ theo id (giữ bản ôn nhiều hơn), nhật ký theo máy */
 function mergeState(local, remote) {
   if (!remote) return local;
-  const a = ensureDlog(JSON.parse(JSON.stringify(local))), b = ensureDlog(migrate(JSON.parse(JSON.stringify(remote))));
+  const a = migrate(JSON.parse(JSON.stringify(local))), b = migrate(JSON.parse(JSON.stringify(remote)));
   const o = { ...a };
-  o.srs = { ...a.srs }; Object.entries(b.srs || {}).forEach(([k, v]) => { o.srs[k] = pickSrs(a.srs[k], v); });
+  o.resetAt = Math.max(a.resetAt || 0, b.resetAt || 0);
+  o.att = {};
+  new Set([...Object.keys(a.att || {}), ...Object.keys(b.att || {})]).forEach(id => {
+    const m = new Map();
+    [...(a.att[id] || []), ...(b.att[id] || [])].forEach(x => { if (x[0] <= o.resetAt) return; const y = m.get(x[0]); if (!y || (!y[5] && x[5])) m.set(x[0], x); });
+    const arr = [...m.values()].sort((p, q) => p[0] - q[0]).slice(-30); if (arr.length) o.att[id] = arr;
+  });
+  o.pdel = [...new Set([...(a.pdel || []), ...(b.pdel || [])])];
+  o.phr = { ...a.phr }; Object.entries(b.phr || {}).forEach(([id, p]) => { if (!o.phr[id] || phrReps(p) > phrReps(o.phr[id])) o.phr[id] = p; });
+  o.pdel.forEach(id => delete o.phr[id]);
+  Object.keys(o.phr).forEach(id => { if (o.phr[id].at <= o.resetAt) delete o.phr[id]; });
   o.dlog = { ...a.dlog };
   Object.entries(b.dlog || {}).forEach(([dev, days]) => {
-    if (dev === DEV) return; // nhật ký của chính máy này: bản trên máy luôn mới nhất
+    if (dev === DEV) return;
     const mine = o.dlog[dev] || {}; const merged = { ...mine };
     Object.entries(days || {}).forEach(([d, l]) => { const x = { ...(mine[d] || {}) }; Object.entries(l || {}).forEach(([f, v]) => { x[f] = Math.max(x[f] || 0, +v || 0); }); merged[d] = x; });
     o.dlog[dev] = merged;
   });
   rebuildLog(o);
-  o.exams = unionBy(a.exams, b.exams, x => x.id || JSON.stringify(x));
-  o.place = unionBy(a.place, b.place, x => x.d + '|' + x.min + '|' + JSON.stringify(x.lv));
-  o.typing = unionBy(a.typing, b.typing, x => JSON.stringify(x)).slice(-300);
-  o.cdel = [...new Set([...(a.cdel || []), ...(b.cdel || [])])];
-  o.custom = unionBy(a.custom, b.custom, x => x.id).filter(c => !o.cdel.includes(c.id));
-  o.week = { ...(a.week || {}) }; Object.entries(b.week || {}).forEach(([w, days]) => { o.week[w] = { ...(o.week[w] || {}) }; Object.entries(days || {}).forEach(([d, v]) => { if (v) o.week[w][d] = true; }); });
-  o.chk = { ...(a.chk || {}) }; Object.entries(b.chk || {}).forEach(([k, v]) => { if (v) o.chk[k] = true; });
-  o.qs = { ...(a.qs || {}) }; Object.entries(b.qs || {}).forEach(([k, v]) => { if (!o.qs[k] || (v.n || 0) > (o.qs[k].n || 0)) o.qs[k] = v; });
+  o.exdel = [...new Set([...(a.exdel || []), ...(b.exdel || [])])];
+  o.exams = unionBy(a.exams, b.exams, x => x.id || JSON.stringify(x)).filter(x => !o.exdel.includes(x.id));
   if ((b.setUpd || 0) > (a.setUpd || 0)) { const keep = {}; LOCAL_SET_KEYS.forEach(k => { if (k in a.set) keep[k] = a.set[k]; }); o.set = { ...a.set, ...b.set, ...keep }; o.setUpd = b.setUpd; }
-  o.upd = Math.max(a.upd || 0, b.upd || 0);
+  o.v = 2; o.upd = Math.max(a.upd || 0, b.upd || 0);
   return o;
 }
 
@@ -68,7 +70,7 @@ const CF = {
         const g = await this.call('/sync');
         let remote = null; if (g.data) { try { remote = JSON.parse(g.data); } catch (e) { } }
         const before = JSON.stringify(S);
-        if (remote) { S = mergeState(S, remote); buildCustom(); try { localStorage.setItem(LSK, JSON.stringify(S)); } catch (e) { } }
+        if (remote) { S = mergeState(S, remote); try { localStorage.setItem(LSK, JSON.stringify(S)); } catch (e) { } }
         if (JSON.stringify(S) !== before) changed = true;
         const data = JSON.stringify(S);
         if (data === g.data) { this.rev = g.rev; break; }
@@ -79,9 +81,10 @@ const CF = {
       this.lastOk = Date.now();
       setSync('cloud', 'Đã đồng bộ ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' (Cloudflare)');
       if (changed) rerenderAfterRemote();
+      if (!C || Date.now() - (CF.cAt || 0) > 6 * 3600e3) { CF.cAt = Date.now(); fetchContent().then(ok => { if (ok && !busyView()) render(); }); }
       if (route === 'plan' && !opts.keepalive) { await this.devices(); if (!changed) { const box = document.querySelector('.devlist'); if (box) box.outerHTML = devListHTML(); } }
     } catch (e) {
-      if (e.status === 401) { this.cfg = null; this.store(); SY.kind = null; setSync('error', 'Máy này đã bị ngắt (khóa đồng bộ đã đổi). Hãy ghép lại ở mục Kế hoạch.'); }
+      if (e.status === 401) { this.cfg = null; this.store(); SY.kind = null; setSync('error', 'Máy này đã bị ngắt (khóa đồng bộ đã đổi). Hãy ghép lại ở mục Cài đặt.'); }
       else setSync(navigator.onLine === false ? 'local' : 'error', navigator.onLine === false ? 'Đang offline. Tiến độ lưu trên máy, sẽ đồng bộ khi có mạng.' : 'Chưa đồng bộ được (' + (e.message || 'lỗi mạng') + '). Tiến độ vẫn lưu trên máy.');
     }
     this.busy = false;
@@ -101,7 +104,6 @@ const CF = {
   },
   async connectWith(key, label) {
     this.cfg = { key, at: Date.now(), label }; this.store();
-    if (GIST.load() && GIST.cfg && GIST.cfg.id) { try { const d = await GIST.pull(); if (d && d.s) { S = mergeState(S, JSON.parse(d.s)); buildCustom(); } } catch (e) { } GIST.cfg = null; GIST.store(); }
     this.start(true); await this.sync(); render();
   },
   async init() { const r = await this.call('/space/init', { method: 'POST' }); this.recovery = r.recovery; await this.connectWith(r.key, 'máy đầu tiên'); },
@@ -113,31 +115,27 @@ const CF = {
   disconnect() { this.cfg = null; this.store(); SY.kind = null; this.pair = null; setSync('local', 'Đã ngắt đồng bộ trên máy này. Tiến độ vẫn lưu trên máy.'); },
 };
 
-let SYU = { busy: false, confirmRotate: false, showGist: false };
+let SYU = { busy: false, confirmRotate: false };
 function syncUI() {
-  if (IN_CLAUDE) return '';
   const c = CF.cfg;
   if (c) {
     const p = CF.pair && CF.pair.exp > Date.now() ? CF.pair : null;
     return `<div class="gist">
       <p><b>Đồng bộ Cloudflare đang bật trên máy này.</b> Dữ liệu được gộp theo từng thẻ, nên học trên cả hai máy (kể cả lúc offline) đều không mất.</p>
       ${CF.recovery ? `<div class="expl bad"><b>Lưu mã khôi phục này</b> (chụp màn hình hoặc ghi vào trình quản lý mật khẩu). Dùng khi mất hết các máy đã ghép: <code class="big">${esc(CF.recovery)}</code><div class="row"><button class="btn sm" data-a="cfRecOk">Mình đã lưu</button></div></div>` : ''}
-      ${p ? `<div class="pairbox"><p>Trên máy kia: mở app → Kế hoạch → <b>Nhập mã ghép</b>:</p><p class="paircode num">${esc(p.code)}</p><div id="qr" class="qr" aria-label="Mã QR để ghép"></div><p class="hint">Hết hạn lúc ${new Date(p.exp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}. Quét QR mở bằng trình duyệt; với app đã cài trên iPhone hãy nhập mã trong app.</p></div>` : ''}
+      ${p ? `<div class="pairbox"><p>Trên máy kia: mở app → Cài đặt → <b>Nhập mã ghép</b>:</p><p class="paircode num">${esc(p.code)}</p><div id="qr" class="qr" aria-label="Mã QR để ghép"></div><p class="hint">Hết hạn lúc ${new Date(p.exp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}. Quét QR mở bằng trình duyệt; với app đã cài trên iPhone hãy nhập mã trong app.</p></div>` : ''}
       ${devListHTML()}
       <div class="row wrap"><button class="btn pri" data-a="cfPair">${p ? 'Tạo mã mới' : 'Ghép thêm máy'}</button><button class="btn" data-a="cfSync">Đồng bộ ngay</button>
       ${SYU.confirmRotate ? '<button class="btn danger" data-a="cfRotateYes">Đổi khóa: các máy khác phải ghép lại</button><button class="btn ghost" data-a="cfRotateNo">Hủy</button>' : '<button class="btn ghost" data-a="cfRotate">Đổi khóa (ngắt mọi máy khác)</button>'}
       <button class="btn ghost" data-a="cfOff">Ngắt máy này</button></div>
     </div>`;
   }
-  const g = GIST.load() && GIST.cfg && GIST.cfg.id;
   return `<div class="gist">
     <p><b>Đồng bộ điện thoại ↔ laptop (Cloudflare).</b> Làm một lần: bật trên máy đầu tiên, rồi ghép máy còn lại bằng mã 8 ký tự.</p>
-    ${g ? '<p class="hint">Máy này đang dùng GitHub Gist (cách cũ). Khi bật Cloudflare, dữ liệu trên gist được gộp vào rồi ngắt gist.</p>' : ''}
     ${CF.hasOwner === false ? '<div class="row"><button class="btn pri" data-a="cfInit">Bật đồng bộ (máy đầu tiên)</button></div>' : ''}
     <label class="fld" for="cf-code">${CF.hasOwner === false ? 'Hoặc nhập mã ghép' : 'Nhập mã ghép từ máy đã kết nối'}<div class="row"><input id="cf-code" class="num" placeholder="XXXX-XXXX" autocomplete="off" autocapitalize="characters" maxlength="9" style="flex:1;min-width:0"><button class="btn${CF.hasOwner === false ? '' : ' pri'}" data-a="cfClaim">Ghép máy này</button></div></label>
     <details><summary class="hint">Mất hết các máy? Dùng mã khôi phục</summary><div class="row"><input id="cf-rec" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" style="flex:1;min-width:0"><button class="btn" data-a="cfRecover">Khôi phục</button></div></details>
     ${CF.hasOwner === null ? '<p class="hint">Chưa kết nối được máy chủ đồng bộ (offline hoặc máy chủ chưa sẵn sàng).</p>' : ''}
-    ${g ? `<p class="hint">Gist cũ: <button class="lnkb lnk" data-a="gistOff">ngắt gist</button></p>` : ''}
   </div>`;
 }
 function devListHTML() {
@@ -167,7 +165,7 @@ Object.assign(ACT, {
 });
 /* Mở link #pair-XXXXXXXX (từ QR) → tự ghép */
 function handlePairHash() {
-  const m = location.hash.match(/^#pair-([A-Za-z0-9]{8})$/); if (!m || IN_CLAUDE) return false;
+  const m = location.hash.match(/^#pair-([A-Za-z0-9]{8})$/); if (!m) return false;
   history.replaceState(null, '', location.pathname + '#plan');
   if (CF.load()) { toast('Máy này đã được ghép rồi'); return false; }
   cfRun(() => CF.claim(m[1]), 'Đã ghép máy này và gộp dữ liệu');
