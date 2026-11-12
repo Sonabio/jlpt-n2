@@ -10,13 +10,18 @@ function typeStats(t) {
   const nPass = t[0] === 'R' ? new Set(its.map(i => i.pid)).size : 0;
   return { t, total: its.length, done: done.length, lastPct: pct(lastOk, done.length), firstPct: pct(firstOk, done.length), avg, avgPass: nPass ? avg * its.length / nPass : 0, weak: done.filter(i => ist(i.id).weak).length, topWhy: topWhy ? topWhy[0] : null, why };
 }
-const ALL_TYPES = () => [...[1, 2, 3, 4, 5].map(m => 'L' + m), ...Object.keys(RT).map(t => 'R' + t)].filter(t => typeItems(t).length);
+const ALL_TYPES = () => [...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(m => 'K' + m), ...Object.keys(RT).map(t => 'R' + t), ...[1, 2, 3, 4, 5].map(m => 'L' + m)].filter(t => typeItems(t).length);
 const lvlCls = p => p >= 75 ? 'good' : p >= 60 ? 'warn' : 'bad';
+function typeAct(t) {
+  if (t[0] === 'K') return { a: 'exTypePick', v: '0:' + t[1] };
+  if (t[0] === 'L') return typeItems(t).some(i => i.kind === 'L') ? { a: 'lpType', v: t[1] } : { a: 'exTypePick', v: '1:' + t[1] };
+  return { a: 'rpType', v: t.slice(1) };
+}
 function advice() {
   const st = ALL_TYPES().map(typeStats).filter(s => s.done >= 3).sort((a, b) => a.lastPct - b.lastPct);
   const out = [], wd = weakDue();
   if (wd.length) out.push({ h: `Làm lại ${wd.length} câu sai đến hạn`, p: 'Câu sai được lặp lại 1 → 3 → 7 → 21 ngày; đúng 3 lần liền thì ra khỏi danh sách yếu.', a: 'weakGo', l: 'Làm lại' });
-  if (st[0] && st[0].lastPct < 75) { const w = st[0]; out.push({ h: `Dạng yếu nhất: ${typeVi(w.t)} (${w.lastPct}%)`, p: (w.t[0] === 'L' ? MD[w.t[1]].tip : RT[w.t.slice(1)].tip), a: w.t[0] === 'L' ? 'lpType' : 'rpType', v: w.t[0] === 'L' ? w.t[1] : w.t.slice(1), l: 'Luyện dạng này' }); }
+  if (st[0] && st[0].lastPct < 75) { const w = st[0]; out.push({ h: `Dạng yếu nhất: ${typeVi(w.t)} (${w.lastPct}%)`, p: (w.t[0] === 'L' ? MD[w.t[1]].tip : w.t[0] === 'K' ? 'Luyện thêm 問題 này từ đề các năm; sai từ/ngữ pháp nào thì ôn lại bằng app/sách.' : RT[w.t.slice(1)].tip), ...typeAct(w.t), l: 'Luyện dạng này' }); }
   const why = {}; ALL_TYPES().forEach(t => Object.entries(typeStats(t).why).forEach(([k, n]) => { why[k] = (why[k] || 0) + n; }));
   const top = Object.entries(why).sort((a, b) => b[1] - a[1])[0];
   const TIP = { nghe: 'Nghe lại câu sai ở 0.85×, nhìn script, rồi nghe lại không script (shadowing 2–3 lần).', tu: 'Bôi đen từ chưa biết trong script/bài đọc và lưu thành thẻ; ôn trên điện thoại mỗi ngày.', bay: 'Khi nghe, chú ý câu sau でも/ただ/やっぱり/実は; ghi ○✕ cho từng lựa chọn đến cuối bài.', cau: 'Đọc/nghe kỹ câu hỏi: hỏi ai, hỏi lý do hay việc làm, "まず" hay "このあと".', gio: 'Đọc câu hỏi trước bài đọc; bấm giờ theo mục tiêu từng dạng, không quay lại câu khó quá 1 lần.', doan: 'Câu đoán bừa = chưa nắm; làm lại sau 1 ngày và đọc script.' };
@@ -24,7 +29,7 @@ function advice() {
   const st2 = ALL_TYPES().map(typeStats).filter(s => s.t[0] === 'R' && s.done >= 2 && s.avgPass > RT[s.t.slice(1)].min * 60 * 1.2);
   if (st2[0]) out.push({ h: `Đọc ${st2[0].t.slice(1)} chậm: ~${Math.round(st2[0].avgPass / 60 * 10) / 10}′/bài (mục tiêu ${RT[st2[0].t.slice(1)].min}′)`, p: RT[st2[0].t.slice(1)].tip });
   const untouched = ALL_TYPES().map(typeStats).filter(s => !s.done);
-  if (out.length < 3 && untouched[0]) out.push({ h: `Chưa làm: ${typeVi(untouched[0].t)}`, p: 'Làm ít nhất 5 câu để có dữ liệu phân tích.', a: untouched[0].t[0] === 'L' ? 'lpType' : 'rpType', v: untouched[0].t[0] === 'L' ? untouched[0].t[1] : untouched[0].t.slice(1), l: 'Bắt đầu' });
+  if (out.length < 3 && untouched[0]) out.push({ h: `Chưa làm: ${typeVi(untouched[0].t)}`, p: 'Làm ít nhất 5 câu để có dữ liệu phân tích.', ...typeAct(untouched[0].t), l: 'Bắt đầu' });
   return out.slice(0, 4);
 }
 VIEWS.weak = () => {
@@ -45,12 +50,12 @@ VIEWS.weak = () => {
       <span class="muted num td">${s.done}/${s.total} câu${s.avg ? ` · ${Math.round(s.t[0] === 'R' ? s.avgPass : s.avg)}s${s.t[0] === 'R' ? '/bài' : '/câu'}` : ''}${s.topWhy ? ` · hay: ${esc(WHY.find(w => w[0] === s.topWhy)[1].toLowerCase())}` : ''}</span></div>`).join('')}</div>
   </section>
   <section class="panel"><div class="ph"><h2>Câu đang yếu</h2>${weak.length ? `<button class="btn sm ${ph ? 'pri' : ''}" data-a="weakGo">Ôn trên ${ph ? 'điện thoại' : 'máy này'}</button>` : ''}</div>
-    ${weak.length ? `<div class="tbl"><table><thead><tr><th>Câu</th><th>Dạng</th><th>Lịch sử</th><th>Làm lại</th><th></th></tr></thead><tbody>${weak.slice(0, 60).map(id => { const it = ITEM[id], s = ist(id); return `<tr><td>${esc(setTitle(SET[it.set]))} · ${it.kind === 'L' ? 'câu ' + it.n : 'đọc'}</td><td lang="ja">${esc(typeName(it.type))}</td><td class="num">${attempts(id).map(a => a[2] ? '<span class="okc">○</span>' : '<span class="ngc">✕</span>').join('')}</td><td class="num">${s.due ? '<b class="due">hôm nay</b>' : new Date(s.dueAt).toLocaleDateString('vi-VN')}</td><td><button class="btn ghost sm" data-a="redo" data-v="${esc(id)}">Làm</button></td></tr>`; }).join('')}</tbody></table></div>` : '<p class="muted">Chưa có câu yếu. Câu làm sai sẽ hiện ở đây.</p>'}
+    ${weak.length ? `<div class="tbl"><table><thead><tr><th>Câu</th><th>Dạng</th><th>Lịch sử</th><th>Làm lại</th><th></th></tr></thead><tbody>${weak.slice(0, 60).map(id => { const it = ITEM[id], s = ist(id); return `<tr><td>${esc(itemLabel(it))}</td><td lang="ja">${esc(typeName(it.type))}</td><td class="num">${attempts(id).map(a => a[2] ? '<span class="okc">○</span>' : '<span class="ngc">✕</span>').join('')}</td><td class="num">${s.due ? '<b class="due">hôm nay</b>' : new Date(s.dueAt).toLocaleDateString('vi-VN')}</td><td><button class="btn ghost sm" data-a="redo" data-v="${esc(id)}">Làm</button></td></tr>`; }).join('')}</tbody></table></div>` : '<p class="muted">Chưa có câu yếu. Câu làm sai sẽ hiện ở đây.</p>'}
   </section>`;
 };
 Object.assign(ACT, {
   weakGo() { startDrill(true); },
-  redo(t) { const it = ITEM[t.dataset.v]; if (devMode() === 'phone') { DR = { q: [{ k: 'i', id: it.id }], i: 0, res: [], picks: [], t0: Date.now() }; go('drill'); render(); return; } if (it.kind === 'L') startListen([it.id], 'Làm lại 1 câu'); else startRead([it.pid], 'Làm lại 1 bài'); },
+  redo(t) { const it = ITEM[t.dataset.v]; if (it.kind === 'X') { startExam(it.exam, 'part', 0, { lis: it.lis, md: it.md }); return; } if (devMode() === 'phone') { DR = { q: [{ k: 'i', id: it.id }], i: 0, res: [], picks: [], t0: Date.now() }; go('drill'); render(); return; } if (it.kind === 'L') startListen([it.id], 'Làm lại 1 câu'); else startRead([it.pid], 'Làm lại 1 bài'); },
 });
 
 /* ===== ÔN NHANH (điện thoại): cụm đã lưu (FSRS) + câu sai đến hạn ===== */
@@ -143,42 +148,6 @@ VIEWS.today = () => {
     <div class="panel"><div class="ph"><h2>14 ngày</h2><span class="hint">phút</span></div><div class="bars">${bars.map(([d, v], i) => `<div class="bar ${i === 13 ? 'now' : ''} ${v >= 120 ? 'full' : ''}" title="${dayKey(d)}: ${v} phút"><i style="height:${v / mx * 100}%"></i><span>${d.getDate()}</span></div>`).join('')}</div></div>
   </section>`;
 };
-
-/* ===== THI THỬ ===== */
-let EX = { run: false, part: 0, t0: 0, acc: 0 };
-try { const e = JSON.parse(localStorage.getItem(LSK + '-timer') || 'null'); if (e) EX = { ...EX, ...e }; } catch (e) { }
-const PARTS = [['Kiến thức ngôn ngữ + Đọc hiểu', 105], ['Nghe hiểu', 50]];
-function exSave() { try { localStorage.setItem(LSK + '-timer', JSON.stringify(EX)); } catch (e) { } }
-function exElapsed() { return EX.acc + (EX.run ? (Date.now() - EX.t0) / 1000 : 0); }
-function beep() { try { const a = beep.ctx || (beep.ctx = new (window.AudioContext || window.webkitAudioContext)()); const o = a.createOscillator(), g = a.createGain(); o.frequency.value = 880; g.gain.value = 0.08; o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + 0.35); } catch (e) { } }
-function drawExamTimer() {
-  const el = $('#extimer'); if (!el) return;
-  const tot = PARTS[EX.part][1] * 60, e = exElapsed(), rem = Math.max(0, tot - e);
-  if (EX.run && rem <= 0) { EX.run = false; EX.acc = tot; exSave(); beep(); }
-  el.innerHTML = `<div class="clock num ${rem < 300 ? 'late' : ''}">${pad(Math.floor(rem / 60))}:${pad(Math.floor(rem % 60))}</div><div class="cbar"><i style="width:${Math.min(100, e / tot * 100)}%"></i></div>
-    <div class="row">${EX.run ? '<button class="btn" data-a="exPause">Tạm dừng</button>' : `<button class="btn pri" data-a="exStart" ${rem <= 0 ? 'disabled' : ''}>${e > 0 ? 'Tiếp tục' : 'Bắt đầu'}</button>`}<button class="btn ghost" data-a="exReset">Đặt lại</button></div>`;
-}
-setInterval(() => { if (route === 'exam' && EX.run) drawExamTimer(); }, 1000);
-VIEWS.exam = () => {
-  const R = LEVEL_RULES.N2, hist = S.exams.slice().sort((a, b) => a.d < b.d ? -1 : 1);
-  return `<h1 class="pt">Thi thử <span lang="ja">模試</span></h1>
-  <section class="grid2"><div class="panel"><div class="ph"><h2>Đồng hồ thi</h2></div><div class="seg">${PARTS.map((p, i) => `<button class="${EX.part === i ? 'on' : ''}" data-a="exPart" data-v="${i}">${p[0]} · ${p[1]}′</button>`).join('')}</div><div id="extimer" class="extimer"></div></div>
-    <div class="panel"><div class="ph"><h2>Nhập điểm đề thi thử</h2></div>
-      <form id="scoreform" class="sform"><label>Ngày <input id="sf-d" type="date" value="${dayKey()}" required></label>${R.secs.map((s, i) => `<label>${s[0]} <small>(0–${s[1]}, liệt &lt; ${s[2]})</small><input id="sf-${i}" type="number" inputmode="numeric" min="0" max="${s[1]}" required></label>`).join('')}<button class="btn pri" type="submit">Lưu và chấm</button></form>
-      <p class="hint">N2 đỗ khi tổng ≥ 90/180 và mỗi phần ≥ 19.</p></div></section>
-  <section class="panel"><div class="ph"><h2>Lịch sử điểm</h2><span class="muted num">${hist.length} đề</span></div>
-    ${hist.length ? `<div class="tbl"><table><thead><tr><th>Ngày</th><th>Từng phần</th><th>Tổng</th><th>Kết quả</th><th></th></tr></thead><tbody>${hist.map(h => { const j = judge('N2', h.s); return `<tr><td class="num">${h.d}</td><td class="num">${h.s.join(' / ')}</td><td class="num"><b>${j.total}</b></td><td>${j.ok ? '<span class="pill good">Đỗ</span>' : `<span class="pill bad">Trượt</span>${j.fails.length ? ' <small>liệt: ' + j.fails.join(', ') + '</small>' : ''}`}</td><td><button class="btn ghost sm" data-a="exDel" data-v="${h.id}">Xóa</button></td></tr>`; }).join('')}</tbody></table></div>` : '<p class="muted">Chưa có đề nào.</p>'}</section>
-  <section class="grid2"><details class="panel"><summary><h2>Cấu trúc đề N2 (105′)</h2></summary><div class="tbl"><table><thead><tr><th>問題</th><th>Dạng</th><th>Làm gì</th><th>Câu</th></tr></thead><tbody>${EXAM_PARTS.map(r => `<tr><td>${r[0]}</td><td lang="ja">${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</tbody></table></div></details>
-    <details class="panel"><summary><h2>Nghe hiểu (50′)</h2></summary><div class="tbl"><table><thead><tr><th>問題</th><th>Dạng</th><th>Mẹo</th></tr></thead><tbody>${[1, 2, 3, 4, 5].map(m => `<tr><td>${m}</td><td lang="ja">${MD[m].ja}</td><td>${esc(MD[m].tip)}</td></tr>`).join('')}</tbody></table></div></details></section>`;
-};
-AFTER.exam = () => { drawExamTimer(); const f = $('#scoreform'); if (f) f.onsubmit = e => { e.preventDefault(); const s = [0, 1, 2].map(i => Math.max(0, Math.min(60, +$('#sf-' + i).value || 0))); S.exams.push({ id: Date.now().toString(36), d: $('#sf-d').value, lv: 'N2', s }); save(); const j = judge('N2', s); toast(`Tổng ${j.total}/180 · ${j.ok ? 'Đỗ' : 'Chưa đỗ'}`); render(); }; };
-Object.assign(ACT, {
-  exPart(t) { if (EX.run) return; EX = { run: false, part: +t.dataset.v, t0: 0, acc: 0 }; exSave(); drawExamTimer(); render(); },
-  exStart() { EX.run = true; EX.t0 = Date.now(); exSave(); drawExamTimer(); },
-  exPause() { EX.acc = exElapsed(); EX.run = false; exSave(); drawExamTimer(); },
-  exReset() { EX = { run: false, part: EX.part, t0: 0, acc: 0 }; exSave(); drawExamTimer(); },
-  exDel(t) { S.exams = S.exams.filter(x => x.id !== t.dataset.v); S.exdel = [...new Set([...(S.exdel || []), t.dataset.v])]; save(); render(); },
-});
 
 /* ===== CÀI ĐẶT ===== */
 function weekStats(back) {

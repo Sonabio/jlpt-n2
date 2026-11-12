@@ -10,7 +10,7 @@ Web luyện đề **nghe** và **đọc** JLPT N2. Máy tính để luyện chí
 - Sau mỗi câu: đáp án, script (tô câu chứa đáp án), chọn **lý do sai**, bôi đen cụm chưa biết để **lưu thành thẻ**.
 - **Điểm yếu**: % đúng theo dạng (lần đầu / lần gần nhất), thời gian, lý do sai hay gặp, gợi ý việc nên làm; câu sai được lặp lại 1 → 3 → 7 → 21 ngày.
 - **Ôn nhanh** (điện thoại): thẻ cụm từ (FSRS) + câu sai đến hạn (câu nghe có thể đọc script thay vì nghe).
-- **Thi thử**: đồng hồ 105′ + 50′, nhập điểm, chấm đỗ/trượt.
+- **Thi thử đề thật 2010–2026** (32 đề): xem đề PDF gốc + phiếu trả lời, thi full 105′ + 50′ hoặc từng 問題, chấm theo bảng đáp án, điểm ước tính, câu sai vào Điểm yếu; xem script sau khi chấm.
 
 ## Nội dung bài tập (riêng tư)
 Repo **không** chứa tài liệu khóa học. Nội dung (`content-n2.json`) và file nghe được tải lên một lần từ laptop
@@ -30,7 +30,8 @@ src/core.js      tiện ích, trạng thái, điều hướng, FSRS, đếm gi�
 src/sync.js      gộp dữ liệu, đồng bộ Cloudflare, ghép máy
 src/content.js   tải nội dung + file nghe, trình phát, nhập tài liệu
 src/practice.js  luyện nghe, luyện đọc, ghi lần làm, lưu cụm
-src/views.js     điểm yếu, ôn nhanh, hôm nay, thi thử, cài đặt, báo cáo tuần
+src/views.js     điểm yếu, ôn nhanh, hôm nay, cài đặt, báo cáo tuần
+src/exam.js      đề thật các năm: trình xem PDF (pdf.js), phiếu trả lời, chấm
 src/head.html    giao diện
 build.sh         ghép thành public/index.html
 worker/index.js  Worker: file tĩnh + API (D1, R2 tùy chọn)

@@ -14,7 +14,7 @@ BODY_PART=$(sed -n '/<div class="app">/,$p' src/head.html)
   echo "$HEAD_PART"
   echo '</head><body>'
   echo "$BODY_PART"
-  echo '<script>'; cat src/data.js src/core.js src/sync.js src/content.js src/practice.js src/views.js src/boot.js; echo '</script>'
+  echo '<script>'; cat src/data.js src/core.js src/sync.js src/content.js src/practice.js src/views.js src/exam.js src/boot.js; echo '</script>'
   echo "<script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}</script>"
   echo '</body></html>'
 } > public/index.html

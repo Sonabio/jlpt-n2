@@ -5,3 +5,4 @@ node_modules/
 content-n2.json
 *.mp3
 *.MP3
+wrangler.test.jsonc

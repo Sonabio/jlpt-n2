@@ -19,7 +19,7 @@ function rec(id, picks, ok, secs, plays) {
 function setWhy(id, why) { const a = S.att[id]; if (!a || !a.length) return; const l = a[a.length - 1]; l[5] = l[5] === why ? '' : why; save(); }
 function okPick(it, picks) { return it.ans.every((v, i) => +picks[i] === v); }
 function itemOpts(it, k) { return (it.opts && (it.opts[k] || it.opts[0])) || null; }
-function weakDue(kind) { return Object.keys(S.att).filter(id => ITEM[id] && (!kind || ITEM[id].kind === kind) && ist(id).due).sort((a, b) => ist(a).dueAt - ist(b).dueAt); }
+function weakDue(kind) { return Object.keys(S.att).filter(id => ITEM[id] && (kind ? ITEM[id].kind === kind : ITEM[id].kind !== 'X') && ist(id).due).sort((a, b) => ist(a).dueAt - ist(b).dueAt); }
 
 /* Chọn văn bản trong script/bài đọc để lưu thành cụm ôn trên điện thoại */
 let LASTSEL = { t: '', src: '' };

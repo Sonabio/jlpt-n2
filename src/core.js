@@ -57,7 +57,8 @@ const ACTIVE = { last: Date.now() };
 setInterval(() => {
   if (document.visibilityState !== 'visible' || Date.now() - ACTIVE.last > 120000) return;
   const audioOn = window.AU && AU.el && !AU.el.paused;
-  const f = route === 'listen' && (LP || audioOn) ? 'l' : route === 'read' && RP ? 'r' : route === 'drill' && DR ? 'd' : null;
+  const exl = route === 'exam' && EXM && EXM.run && !EXM.graded ? ((EXM.mode === 'full' ? EXM.part === 1 : EXM.sec && EXM.sec.lis) ? 'l' : 'r') : null;
+  const f = exl || (route === 'listen' && (LP || audioOn) ? 'l' : route === 'read' && RP ? 'r' : route === 'drill' && DR ? 'd' : null);
   if (!f && !audioOn) return;
   logAdd(f || 'l', 15); tickSave();
 }, 15000);

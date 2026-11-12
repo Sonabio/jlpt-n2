@@ -4,7 +4,7 @@
 const REPORT_HASH = '072d55652a81b1b6b93460e12e54198d6069e0c3b28483f347937f5bd944e69e'; // sha256 của mã báo cáo (mã nằm trong lịch báo cáo, không có trong repo)
 const PAIR_TTL = 10 * 60 * 1000;
 const MAX_DATA = 1_800_000;
-const MAX_CONTENT = 1_900_000, MAX_AUDIO = 12_000_000, CHUNK = 900_000;
+const MAX_CONTENT = 1_950_000, MAX_AUDIO = 12_000_000, MAX_R2 = 99_000_000, CHUNK = 900_000, TOK_TTL = 12 * 3600 * 1000;
 const AID = /^[A-Za-z0-9-]{1,40}$/;
 const ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
@@ -25,6 +25,7 @@ async function init(db) {
     db.prepare('CREATE TABLE IF NOT EXISTS content (id TEXT PRIMARY KEY, data TEXT, upd INTEGER)'),
     db.prepare('CREATE TABLE IF NOT EXISTS audio_meta (id TEXT PRIMARY KEY, size INTEGER, parts INTEGER, store TEXT, upd INTEGER)'),
     db.prepare('CREATE TABLE IF NOT EXISTS audio_part (id TEXT, part INTEGER, data BLOB, PRIMARY KEY (id, part))'),
+    db.prepare('CREATE TABLE IF NOT EXISTS tok (t TEXT PRIMARY KEY, exp INTEGER)'),
   ]);
   ready = true;
 }
@@ -87,6 +88,16 @@ async function api(req, env, url) {
     return json({ lastSync: iso(row.updated_at), rev: row.rev, devices: (devs.results || []).map(d => ({ name: d.name, firstSeen: iso(d.first_seen), lastSeen: iso(d.last_seen) })), summary: row.summary ? JSON.parse(row.summary) : null });
   }
 
+  if (p.startsWith('/api/audio/') && (m === 'GET' || m === 'HEAD')) {
+    const id = decodeURIComponent(p.slice('/api/audio/'.length));
+    if (!AID.test(id)) return err('bad_id', 'Mã file không hợp lệ.', 400);
+    const t = url.searchParams.get('t');
+    let ok = false;
+    if (t) { const r = await db.prepare('SELECT exp FROM tok WHERE t = ?').bind(await sha(t)).first(); ok = !!r && r.exp > Date.now(); }
+    else ok = !!(await auth(req, db));
+    if (!ok) return err('unauthorized', 'Cần khóa đồng bộ.', 401);
+    return media(req, env, db, id);
+  }
   const a = await auth(req, db);
   if (!a) return err('unauthorized', 'Máy này chưa được ghép hoặc khóa đã bị đổi. Hãy ghép lại.', 401);
 
@@ -133,44 +144,60 @@ async function api(req, env, url) {
     await db.prepare("INSERT INTO content (id, data, upd) VALUES ('main', ?, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data, upd = excluded.upd").bind(b.data, now).run();
     return json({ ok: true, upd: now });
   }
-  /* File nghe: R2 nếu đã gắn bucket (AUDIO), nếu chưa thì chia khúc lưu trong D1 */
+  /* File nghe / PDF đề: R2 nếu đã gắn bucket (AUDIO); chưa có R2 thì file nhỏ (≤12MB) chia khúc lưu trong D1 */
   if (p === '/api/audio' && m === 'GET') {
-    const r = await db.prepare('SELECT id FROM audio_meta').all();
+    const r = await db.prepare('SELECT id, size FROM audio_meta').all();
     return json({ ids: (r.results || []).map(x => x.id), r2: !!env.AUDIO });
   }
-  if (p.startsWith('/api/audio/')) {
+  if (p === '/api/media-token' && m === 'POST') {
+    const now = Date.now(), t = randKey(), exp = now + TOK_TTL;
+    await db.batch([db.prepare('DELETE FROM tok WHERE exp < ?').bind(now), db.prepare('INSERT INTO tok (t, exp) VALUES (?, ?)').bind(await sha(t), exp)]);
+    return json({ t, exp });
+  }
+  if (p.startsWith('/api/audio/') && m === 'PUT') {
     const id = decodeURIComponent(p.slice('/api/audio/'.length));
     if (!AID.test(id)) return err('bad_id', 'Mã file không hợp lệ.', 400);
-    if (m === 'PUT') {
-      const buf = new Uint8Array(await req.arrayBuffer());
-      if (!buf.length || buf.length > MAX_AUDIO) return err('too_large', 'File nghe quá lớn hoặc rỗng.', 413);
-      const now = Date.now();
-      if (env.AUDIO) {
-        await env.AUDIO.put('a/' + id, buf, { httpMetadata: { contentType: 'audio/mpeg' } });
-        await db.batch([db.prepare('DELETE FROM audio_part WHERE id = ?').bind(id), db.prepare('INSERT INTO audio_meta (id, size, parts, store, upd) VALUES (?, ?, 0, ?, ?) ON CONFLICT(id) DO UPDATE SET size = excluded.size, parts = 0, store = excluded.store, upd = excluded.upd').bind(id, buf.length, 'r2', now)]);
-      } else {
-        const parts = Math.ceil(buf.length / CHUNK), st = [db.prepare('DELETE FROM audio_part WHERE id = ?').bind(id)];
-        for (let i = 0; i < parts; i++) st.push(db.prepare('INSERT INTO audio_part (id, part, data) VALUES (?, ?, ?)').bind(id, i, buf.slice(i * CHUNK, (i + 1) * CHUNK)));
-        st.push(db.prepare('INSERT INTO audio_meta (id, size, parts, store, upd) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET size = excluded.size, parts = excluded.parts, store = excluded.store, upd = excluded.upd').bind(id, buf.length, parts, 'd1', now));
-        await db.batch(st);
-      }
-      return json({ ok: true, size: buf.length });
+    const len = Number(req.headers.get('content-length')) || 0, type = (req.headers.get('content-type') || 'audio/mpeg').split(';')[0];
+    const now = Date.now();
+    if (env.AUDIO) {
+      if (!len || len > MAX_R2) return err('too_large', 'File quá lớn hoặc thiếu kích thước.', 413);
+      await env.AUDIO.put('a/' + id, req.body, { httpMetadata: { contentType: type } });
+      await db.batch([db.prepare('DELETE FROM audio_part WHERE id = ?').bind(id), db.prepare('INSERT INTO audio_meta (id, size, parts, store, upd) VALUES (?, ?, 0, ?, ?) ON CONFLICT(id) DO UPDATE SET size = excluded.size, parts = 0, store = excluded.store, upd = excluded.upd').bind(id, len, 'r2:' + type, now)]);
+      return json({ ok: true, size: len });
     }
-    if (m === 'GET') {
-      const meta = await db.prepare('SELECT size, parts, store FROM audio_meta WHERE id = ?').bind(id).first();
-      if (!meta) return err('not_found', 'Chưa có file nghe này.', 404);
-      const hdr = { 'content-type': 'audio/mpeg', 'cache-control': 'private, max-age=31536000, immutable', 'content-length': String(meta.size) };
-      if (meta.store === 'r2' && env.AUDIO) {
-        const o = await env.AUDIO.get('a/' + id); if (!o) return err('not_found', 'Thiếu file trong R2.', 404);
-        return new Response(o.body, { headers: hdr });
-      }
-      const out = new Uint8Array(meta.size); let off = 0;
-      for (let i = 0; i < meta.parts; i++) { const r = await db.prepare('SELECT data FROM audio_part WHERE id = ? AND part = ?').bind(id, i).first(); const d = new Uint8Array(r.data); out.set(d, off); off += d.length; }
-      if (env.AUDIO) { await env.AUDIO.put('a/' + id, out, { httpMetadata: { contentType: 'audio/mpeg' } }); await db.batch([db.prepare("UPDATE audio_meta SET store = 'r2', parts = 0 WHERE id = ?").bind(id), db.prepare('DELETE FROM audio_part WHERE id = ?').bind(id)]); }
-      return new Response(out, { headers: hdr });
-    }
+    if (len > MAX_AUDIO) return err('need_r2', 'File lớn (' + Math.round(len / 1e6) + 'MB) cần kho R2. Tạo bucket R2 jlpt-n2-audio rồi báo để gắn vào.', 507);
+    const buf = new Uint8Array(await req.arrayBuffer());
+    if (!buf.length || buf.length > MAX_AUDIO) return err('too_large', 'File quá lớn hoặc rỗng.', 413);
+    const parts = Math.ceil(buf.length / CHUNK), st = [db.prepare('DELETE FROM audio_part WHERE id = ?').bind(id)];
+    for (let i = 0; i < parts; i++) st.push(db.prepare('INSERT INTO audio_part (id, part, data) VALUES (?, ?, ?)').bind(id, i, buf.slice(i * CHUNK, (i + 1) * CHUNK)));
+    st.push(db.prepare('INSERT INTO audio_meta (id, size, parts, store, upd) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET size = excluded.size, parts = excluded.parts, store = excluded.store, upd = excluded.upd').bind(id, buf.length, parts, 'd1:' + type, now));
+    await db.batch(st);
+    return json({ ok: true, size: buf.length });
   }
   return err('not_found', 'Không có API này.', 404);
+}
+async function media(req, env, db, id) {
+  const meta = await db.prepare('SELECT size, parts, store FROM audio_meta WHERE id = ?').bind(id).first();
+  if (!meta) return err('not_found', 'Chưa có file này.', 404);
+  const [where, type0] = String(meta.store || 'd1').split(':'), type = type0 || 'audio/mpeg';
+  const base = { 'content-type': type, 'cache-control': 'private, max-age=31536000, immutable', 'accept-ranges': 'bytes' };
+  if (where === 'r2' && env.AUDIO) {
+    const rg = req.headers.get('range');
+    const o = await env.AUDIO.get('a/' + id, rg ? { range: req.headers } : undefined);
+    if (!o) return err('not_found', 'Thiếu file trong R2.', 404);
+    if (rg && o.range) {
+      const off = o.range.offset || 0, len = o.range.length != null ? o.range.length : o.size - off;
+      return new Response(req.method === 'HEAD' ? null : o.body, { status: 206, headers: { ...base, 'content-range': `bytes ${off}-${off + len - 1}/${o.size}`, 'content-length': String(len) } });
+    }
+    return new Response(req.method === 'HEAD' ? null : o.body, { headers: { ...base, 'content-length': String(o.size) } });
+  }
+  if (req.method === 'HEAD') return new Response(null, { headers: { ...base, 'content-length': String(meta.size) } });
+  const out = new Uint8Array(meta.size); let off = 0;
+  for (let i = 0; i < meta.parts; i++) { const r = await db.prepare('SELECT data FROM audio_part WHERE id = ? AND part = ?').bind(id, i).first(); const d = new Uint8Array(r.data); out.set(d, off); off += d.length; }
+  if (env.AUDIO) { await env.AUDIO.put('a/' + id, out, { httpMetadata: { contentType: type } }); await db.batch([db.prepare('UPDATE audio_meta SET store = ?, parts = 0 WHERE id = ?').bind('r2:' + type, id), db.prepare('DELETE FROM audio_part WHERE id = ?').bind(id)]); }
+  const rg = (req.headers.get('range') || '').match(/bytes=(\d+)-(\d*)/);
+  if (rg) { const s0 = +rg[1], e0 = rg[2] ? Math.min(+rg[2], meta.size - 1) : meta.size - 1; return new Response(out.slice(s0, e0 + 1), { status: 206, headers: { ...base, 'content-range': `bytes ${s0}-${e0}/${meta.size}`, 'content-length': String(e0 - s0 + 1) } }); }
+  return new Response(out, { headers: { ...base, 'content-length': String(meta.size) } });
 }
 async function rotate(db, oldId, keepDev) {
   const key = randKey(), id = await sha(key);
