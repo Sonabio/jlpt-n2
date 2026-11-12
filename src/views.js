@@ -13,7 +13,7 @@ function typeStats(t) {
 const ALL_TYPES = () => [...PARTS().filter(p => p.sec === 'K').map(p => 'K' + p.md), ...Object.keys(RTL()).map(t => 'R' + t), ...Object.keys(MDL()).map(m => 'L' + m)].filter(t => typeItems(t).length);
 const lvlCls = p => p >= 75 ? 'good' : p >= 60 ? 'warn' : 'bad';
 function typeAct(t) {
-  if (t[0] === 'K') return { a: 'exTypePick', v: '0:' + t.slice(1) };
+  if (t[0] === 'K') return typeItems(t).some(i => i.kind === 'R') ? { a: 'rpK', v: t.slice(1) } : { a: 'exTypePick', v: '0:' + t.slice(1) };
   if (t[0] === 'L') return typeItems(t).some(i => i.kind === 'L') ? { a: 'lpType', v: t[1] } : { a: 'exTypePick', v: '1:' + t[1] };
   if (!typeItems(t).some(i => i.kind === 'R')) { const p = PARTS().find(x => x.rt === t.slice(1)); if (p) return { a: 'exTypePick', v: '0:' + p.md }; }
   return { a: 'rpType', v: t.slice(1) };
@@ -119,7 +119,7 @@ Object.assign(ACT, {
 
 /* ===== HÔM NAY ===== */
 function nextSet(kind) {
-  const order = C.sets.filter(s => s.kind === kind).sort((a, b) => (a.src === b.src ? a.unit - b.unit : a.src === 'f-' ? -1 : 1));
+  const order = C.sets.filter(s => s.kind === kind && !isKSet(s)).sort((a, b) => (a.src === b.src ? a.unit - b.unit : a.src === 'f-' ? -1 : 1));
   return order.find(s => s.items.some(i => !attempts(i.id).length));
 }
 function dayMin(k) { const l = S.log[k] || {}; return Math.round(((l.l || 0) + (l.r || 0) + (l.d || 0)) / 60); }

@@ -115,7 +115,7 @@ function lpView() {
     ${it.img ? `<img class="optimg" src="${it.img}" alt="Lựa chọn dạng hình">` : ''}
     ${!itemOpts(it, 0) ? (it.img ? '<p class="hint">Lựa chọn dạng hình: nhìn hình rồi chọn số.</p>' : '<p class="hint">Lựa chọn chỉ được đọc trong bài nghe (giáo trình không in chữ). Nghe rồi chọn số.</p>') : !vis ? '<p class="hint">Dạng này lựa chọn được đọc trong bài nghe. Nghe rồi chọn số; muốn dễ hơn thì bật hiện chữ.</p>' : ''}
     ${qs}
-    ${LP.shown ? lpReveal(it) : `<div class="row"><button class="btn ghost sm" data-a="lpShowOpts">${LP.showOpts ? 'Ẩn chữ' : 'Hiện chữ'}</button><button class="btn ghost sm" data-a="lpSkip">Bỏ qua câu này</button></div>`}
+    ${LP.shown ? lpReveal(it) : `<div class="row">${itemOpts(it, 0) ? `<button class="btn ghost sm" data-a="lpShowOpts">${LP.showOpts ? 'Ẩn chữ' : 'Hiện chữ'}</button>` : ''}<button class="btn ghost sm" data-a="lpSkip">Bỏ qua câu này</button></div>`}
   </section>`;
 }
 function lpReveal(it) {
@@ -123,7 +123,7 @@ function lpReveal(it) {
   return `<div class="expl ${ok ? 'good' : 'bad'}"><b>${ok ? 'Đúng' : 'Sai'}</b> · đáp án ${it.ans.map(a => CIRC[a - 1]).join(' / ')}${ok ? '' : ' · bạn chọn ' + LP.picks.map(a => CIRC[a - 1]).join(' / ')}</div>
     ${it.ex ? `<p class="exnote">${esc(it.ex)}</p>` : ''}
     ${whyChips(it.id)}
-    <details class="scriptd" open><summary><b>Script</b> <span class="hint">câu tô màu là chỗ chứa đáp án</span></summary>${scriptHTML(it, it.id)}</details>
+    ${it.script ? `<details class="scriptd" open><summary><b>Script</b> <span class="hint">câu tô màu là chỗ chứa đáp án</span></summary>${scriptHTML(it, it.id)}</details>` : '<p class="hint">Bài này không có script (tài liệu chỉ có file nghe + đáp án). Nghe lại để tìm chỗ chứa đáp án.</p>'}
     ${phraseBox(it.id)}
     <div class="row"><button class="btn" data-a="auReplay">Nghe lại từ đầu</button><button class="btn pri" data-a="lpNext">${LP.i + 1 < LP.ids.length ? 'Câu tiếp (Enter)' : 'Xem kết quả'}</button></div>`;
 }
@@ -176,20 +176,33 @@ function startRead(pids, label) {
   if (route !== 'read') go('read'); else render();
 }
 function passItems(pid) { return Object.values(ITEM).filter(i => i.pid === pid).sort((a, b) => a.id < b.id ? -1 : 1); }
+/* Bộ chỉ gồm bài từ vựng/ngữ pháp (passage có md, vd tài liệu Dũng Mori) */
+const isKSet = s => s.kind === 'R' && s.passages.length && s.passages.every(p => p.md);
+/* Thời gian mục tiêu + mẹo của một bài: bài đọc theo dạng 読解; bài từ vựng/ngữ pháp ~0,6 phút/câu */
+function passInfo(p) {
+  if (p.md) return { min: Math.max(1, Math.round(passItems(p.pid).length * 0.6)), tip: 'Mỗi câu khoảng 30–40 giây. Không chắc thì loại trừ rồi chọn, đừng dừng lâu. Sai từ/ngữ pháp nào thì ghi lại để ôn bằng sách/app khác.' };
+  const r = RTL()[p.type] || {}; return { min: r.min || 5, tip: r.tip || '' };
+}
 VIEWS.read = () => {
   if (!C) return noContent();
   if (RP && !RP.done) return rpView();
   if (RP && RP.done) return rpSummary();
-  const sets = C.sets.filter(s => s.kind === 'R'), wd = weakDue('R');
+  const all = C.sets.filter(s => s.kind === 'R'), sets = all.filter(s => !isKSet(s)), ksets = all.filter(isKSet), wd = weakDue('R');
   const types = Object.keys(RTL());
+  const kparts = PARTS().filter(p => p.sec === 'K').map(p => ({ p, ps: Object.values(PASS).filter(x => x.md === p.md) })).filter(x => x.ps.length);
+  const kgrid = kparts.length ? `<section class="panel"><div class="ph"><h2>Từ vựng · Ngữ pháp <span lang="ja">文字・語彙・文法</span></h2></div>
+    <p class="hint">Bài luyện theo đúng 問題 của đề thi. Câu sai vào Điểm yếu như câu đọc/nghe.</p>
+    <div class="mdgrid">${kparts.map(({ p, ps }) => { const n = ps.reduce((a, x) => a + passItems(x.pid).length, 0), st = typeStats('K' + p.md); return `<div class="mdc"><b lang="ja">${PPS(p)} 問題${p.no} ${p.ja}</b><span class="muted">${p.vi} · ${n} câu</span>${st.done ? `<span class="num">${st.lastPct}% đúng (gần nhất)</span>` : '<span class="muted">chưa làm</span>'}<button class="btn sm" data-a="rpK" data-v="${p.md}">3 bài</button></div>`; }).join('')}</div>
+    <div class="sets">${ksets.map(setCard).join('')}</div></section>` : '';
   return `<h1 class="pt">Luyện đọc <span lang="ja">読解</span></h1>
   ${wd.length ? `<section class="panel ptnudge"><span><b>${wd.length} câu đọc sai</b> đến hạn làm lại.</span><button class="btn pri" data-a="rpWeak">Làm lại câu sai</button></section>` : ''}
   <section class="panel"><div class="ph"><h2>Theo dạng</h2></div>
     <div class="mdgrid">${types.map(t => { const ps = Object.values(PASS).filter(p => p.type === t), st = typeStats('R' + t); return ps.length ? `<div class="mdc"><b lang="ja">${t}</b><span class="muted">${RTL()[t].vi} · ${ps.length} bài · ~${RTL()[t].min}′/bài</span>${st.done ? `<span class="num">${st.lastPct}% đúng · ${st.avgPass ? Math.round(st.avgPass / 60 * 10) / 10 + '′/bài' : ''}</span>` : '<span class="muted">chưa làm</span>'}<button class="btn sm" data-a="rpType" data-v="${t}">3 bài</button></div>` : ''; }).join('')}</div></section>
-  <section class="panel"><div class="ph"><h2>Theo bài</h2></div><div class="sets">${sets.map(setCard).join('') || `<p class="muted">Chưa có bài đọc cho ${curLv()}.</p>`}</div></section>`;
+  <section class="panel"><div class="ph"><h2>Theo bài</h2></div><div class="sets">${sets.map(setCard).join('') || `<p class="muted">Chưa có bài đọc cho ${curLv()}.</p>`}</div></section>
+  ${kgrid}`;
 };
 function rpView() {
-  const p = PASS[RP.pids[RP.i]], items = passItems(p.pid), el = (Date.now() - RP.t0) / 1000, tgt = RTL()[p.type].min * 60;
+  const p = PASS[RP.pids[RP.i]], items = passItems(p.pid), el = (Date.now() - RP.t0) / 1000, info = passInfo(p), tgt = info.min * 60;
   const qh = items.map((it, k) => {
     const o = itemOpts(it, 0) || [];
     return `<div class="rq"><p class="rqq" lang="ja"><b>${items.length > 1 ? '問' + (k + 1) + ' ' : ''}</b>${esc(it.q)}</p><div class="opts one">${o.map((x, j) => {
@@ -201,11 +214,11 @@ function rpView() {
   return `<div class="rv-top"><button class="btn ghost sm" data-a="rpQuit">Thoát</button><span class="muted">${esc(SET[items[0].set] ? setTitle(SET[items[0].set]) : '')} · <span lang="ja">${p.type}</span></span><span class="num muted">${RP.i + 1}/${RP.pids.length}</span></div>
   <div class="rv-prog"><i style="width:${RP.i / RP.pids.length * 100}%"></i></div>
   <div class="rgrid">
-    <section class="panel"><div class="ph"><h2 lang="ja">${p.type}</h2><span id="rtimer" class="num ${el > tgt ? 'late' : ''}" data-tgt="${tgt}">${mmss(el)} / ${RTL()[p.type].min}:00</span></div>
+    <section class="panel"><div class="ph"><h2 lang="ja">${p.type}</h2><span id="rtimer" class="num ${el > tgt ? 'late' : ''}" data-tgt="${tgt}">${mmss(el)} / ${info.min}:00</span></div>
       ${passageHTML(p)}
       ${RP.shown ? phraseBox(p.pid) : ''}</section>
     <section class="panel rqs">${qh}
-      ${RP.shown ? `<div class="expl ${RP.lastOk === items.length ? 'good' : 'bad'}"><b>${RP.lastOk}/${items.length} đúng</b> · ${mmss(RP.lastSec)} (mục tiêu ${RTL()[p.type].min}′)</div><p class="hint">${esc(RTL()[p.type].tip)}</p><button class="btn pri" data-a="rpNext">${RP.i + 1 < RP.pids.length ? 'Bài tiếp (Enter)' : 'Xem kết quả'}</button>`
+      ${RP.shown ? `<div class="expl ${RP.lastOk === items.length ? 'good' : 'bad'}"><b>${RP.lastOk}/${items.length} đúng</b> · ${mmss(RP.lastSec)} (mục tiêu ${info.min}′)</div><p class="hint">${esc(info.tip)}</p><button class="btn pri" data-a="rpNext">${RP.i + 1 < RP.pids.length ? 'Bài tiếp (Enter)' : 'Xem kết quả'}</button>`
       : `<button class="btn pri" data-a="rpSubmit" ${all ? '' : 'disabled'}>Nộp bài</button>`}
     </section></div>`;
 }
@@ -216,6 +229,7 @@ AFTER.read = () => {
 Object.assign(ACT, {
   rpSet(t) { startRead(SET[t.dataset.v].passages.map(p => p.pid), setTitle(SET[t.dataset.v])); },
   rpType(t) { const ps = Object.values(PASS).filter(p => p.type === t.dataset.v).map(p => p.pid); const fresh = shuffle(ps.filter(pid => !passItems(pid).some(i => attempts(i.id).length))), old = shuffle(ps.filter(pid => passItems(pid).some(i => attempts(i.id).length))); startRead([...fresh, ...old].slice(0, 3), t.dataset.v); },
+  rpK(t) { const md = +t.dataset.v, ps = Object.values(PASS).filter(p => p.md === md).map(p => p.pid); const fresh = shuffle(ps.filter(pid => !passItems(pid).some(i => attempts(i.id).length))), old = shuffle(ps.filter(pid => passItems(pid).some(i => attempts(i.id).length))); startRead([...fresh, ...old].slice(0, 3), (PART(md) || {}).ja || 'Từ vựng · Ngữ pháp'); },
   rpWeak() { const pids = [...new Set(weakDue('R').map(id => ITEM[id].pid))]; startRead(pids.slice(0, 6), 'Câu sai cần làm lại'); },
   rpPick(t) { if (RP.shown) return; RP.picks[t.dataset.id] = +t.dataset.v; render(); },
   rpSubmit() {
