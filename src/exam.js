@@ -16,7 +16,7 @@ function exItems(e) {
 const exLv = e => (e && e.lv) || 'N2';
 const exPapers = e => LVD(exLv(e)).papers;
 const exPaperOf = (e, x) => x.lis ? exPapers(e).length - 1 : PART(x.md, exLv(e)).pp;
-function exLisOn() { if (!EXM) return false; const e = EXAM(EXM.id); return EXM.mode === 'full' ? !!(e && exPapers(e)[EXM.part] || {}).lis : !!(EXM.sec && EXM.sec.lis); }
+function exLisOn() { if (!EXM) return false; const e = EXAM(EXM.id); if (e && !e.mp3) return false; return EXM.mode === 'full' ? !!(e && exPapers(e)[EXM.part] || {}).lis : !!(EXM.sec && EXM.sec.lis); }
 const exItemId = (eid, key) => 'x' + eid + '-' + key;
 /* Đăng ký từng câu của đề vào ITEM để phần phân tích điểm yếu tính chung */
 const _indexContent = indexContent;
@@ -117,7 +117,8 @@ function exView() {
   const ftabs = files.length > 1 ? files.map(a => `<button class="${EXM.view === 'p' && EXM.passet === a ? 'on' : ''}" data-a="exFile" data-v="${a}">${['文字語彙', '文法', '読解', '聴解'][+a.slice(-1)] || 'Đề'}</button>`).join('') : '';
   const tabs = EXM.graded || ftabs ? `<div class="seg sm">${ftabs || `<button class="${EXM.view === 'p' ? 'on' : ''}" data-a="exViewP">Đề</button>`}${EXM.graded && e.script ? `<button class="${EXM.view === 's' ? 'on' : ''}" data-a="exViewS">Script nghe</button>` : ''}</div>` : '';
   const amds = multiA ? [...new Set(exItems(e).filter(i => i.lis && EXM.keys.includes(i.key)).map(i => i.md))] : [];
-  const next = EXM.mode === 'full' && EXM.part + 1 < pp.length ? pp[EXM.part + 1] : null;
+  let next = EXM.mode === 'full' && EXM.part + 1 < pp.length ? pp[EXM.part + 1] : null;
+  if (next && next.lis && !e.mp3) next = null;   // đề không có file nghe: dừng sau phần đọc
   return `<div class="rv-top"><button class="btn ghost sm" data-a="exQuit">Thoát</button><span class="muted">Đề ${esc(e.title)} · ${esc(title)}</span><span id="exclock" class="num clockm ${x.late ? 'late' : ''}">${x.t}</span></div>
   <div class="exgrid"><section class="panel expdf">${pdfViewerHTML(tabs)}</section>
   <aside class="panel exside">
@@ -199,11 +200,11 @@ VIEWS.exam = () => {
   const lv = curLv(), D = LVD(lv), R = D.rule, ex = EXDEF(), hist = S.exams.filter(h => (h.lv || 'N2') === lv).sort((a, b) => a.d < b.d ? -1 : 1), max = R.secs.reduce((a, x) => a + x[1], 0);
   const kp = D.parts.filter(p => p.sec === 'K'), rp = D.parts.filter(p => p.sec === 'R');
   const chip = (e, lis, md, label) => `<button class="chip" data-a="exPart" data-v="${e.id}" data-s="${lis}:${md}" lang="ja">${label}</button>`;
-  const secBtns = e => `<div class="chips">${kp.map(p => chip(e, 0, p.md, `${PPS(p)} 問題${p.no}`.trim())).join('')}</div><div class="chips">${rp.map(p => chip(e, 0, p.md, `読解 問題${p.no}`)).join('')}</div><div class="chips">${Object.keys(D.lis).map(m => chip(e, 1, m, `聴解 問題${m}`)).join('')}</div>`;
+  const secBtns = e => `<div class="chips">${kp.map(p => chip(e, 0, p.md, `${PPS(p)} 問題${p.no}`.trim())).join('')}</div><div class="chips">${rp.map(p => chip(e, 0, p.md, `読解 問題${p.no}`)).join('')}</div>${e.mp3 ? `<div class="chips">${Object.keys(D.lis).map(m => chip(e, 1, m, `聴解 問題${m}`)).join('')}</div>` : '<p class="hint">Đề này chưa có file nghe.</p>'}`;
   const flow = D.papers.map(p => `${p.min}′ ${p.vi.toLowerCase()}`).join(', rồi ');
   return `<h1 class="pt">Thi thử ${lv} <span lang="ja">模試</span></h1>
   <section class="panel lvbar"><span><b>Cấp đang luyện</b></span>${lvSwitchHTML()}</section>
-  ${ex.length ? `<section class="panel"><div class="ph"><h2>${lv === 'N2' ? 'Đề thật các năm' : 'Đề chính thức (公式問題集)'}</h2><span class="muted">${ex.length} đề</span></div>
+  ${ex.length ? `<section class="panel"><div class="ph"><h2>${lv === 'N2' ? 'Đề thật các năm' : lv === 'N4' ? 'Đề thật các năm + 公式問題集' : 'Đề chính thức (公式問題集)'}</h2><span class="muted">${ex.length} đề</span></div>
     <p class="hint">Thi full: ${flow}; chấm theo bảng đáp án, điểm từng phần ước tính = % đúng × điểm tối đa của phần. Hoặc làm từng 問題 để luyện dạng mình yếu.</p>
     <div class="exlist">${ex.map(e => { const st = exStat(e), av = exAvail(e), j = st.full ? judge(lv, st.full.s) : null; return `<div class="exi"><div class="exh"><b>${esc(e.title)}</b>${!av ? '<span class="tag">chưa tải file</span>' : ''}<span class="muted num">${st.done ? `đã làm ${st.done}/${st.n} câu · đúng lần đầu ${st.firstPct}%` : `${st.n} câu`}</span>${j ? `<span class="pill ${j.ok ? 'good' : 'bad'}">${j.total}/${max}</span>` : ''}
       <span class="exb"><button class="btn sm pri" data-a="exFull" data-v="${e.id}" ${av ? '' : 'disabled'}>Thi full</button><button class="btn sm" data-a="exToggle" data-v="${e.id}" ${av ? '' : 'disabled'}>Từng phần</button></span></div>${EXL.open === e.id ? secBtns(e) : ''}</div>`; }).join('')}</div>

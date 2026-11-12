@@ -201,6 +201,8 @@ function addDoc(set, logic, opt) {
 const MD = {
   N3: { '漢字読み': 1, '表記': 2, '文脈規定': 3, '言い換え類義': 4, '用法': 5, '文法形式の判断': 6, '文の組み立て': 7, '文章の文法': 8 },
   N2: { '漢字読み': 1, '表記': 2, '語形成': 3, '文脈規定': 4, '言い換え類義': 5, '用法': 6, '文法形式の判断': 7, '文の組み立て': 8, '文章の文法': 9 },
+  N4: { '漢字読み': 1, '表記': 2, '文脈規定': 3, '言い換え類義': 4, '用法': 5, '文法形式の判断': 6, '文の組み立て': 7, '文章の文法': 8 },
+  N5: { '漢字読み': 1, '表記': 2, '文脈規定': 3, '言い換え類義': 4, '文法形式の判断': 5, '文の組み立て': 6, '文章の文法': 7 },
 };
 const mdOf = (lv, name) => (MD[lv] || {})[name];
 function newSet(lv, title, unit) { const s = { id: 'dm' + (++sid), kind: 'R', src: 'dm-', unit, lv, title, passages: [], items: [] }; sets.push(s); return s; }
@@ -262,11 +264,131 @@ function listenSet(lv, md, title, unit, dirRe, mp3Re) {
 listenSet('N3', 4, 'Dũng Mori · Nghe 発話表現', 50, /^N3 Dũng Mori 2024\/Chặng 2\/Nghe Hiểu\/Mondai 4\//, /md4-(\d+)\.mp3$/i);
 listenSet('N3', 5, 'Dũng Mori · Nghe 即時応答', 51, /^N3 Dũng Mori 2024\/Chặng 2\/Nghe Hiểu\/Mondai 5\//, /(\d+)\)?\.mp3$/i);
 
+/* ===== N4: "Test tổng hợp" Bài 26–50 (file Word). Đáp án ghi "(Đúng)" cạnh lựa chọn đúng.
+   問題1 Chữ Hán → 漢字読み; 問題2 Ngữ pháp → 文法形式の判断. Chỗ trống trong đề đã điền sẵn đáp án bằng chữ xanh lá → đổi thành （　）.
+   (Bộ mới thêm SAU các bộ cũ để id bộ cũ không đổi — tiến độ đã làm vẫn khớp.) ===== */
+function testLines(file) {      // như docxLines nhưng chỉ đánh dấu chữ xanh lá (3c763d = đáp án điền sẵn)
+  let x = unzip(fs.readFileSync(file))['word/document.xml']().toString('utf8');
+  x = x.replace(/<w:rt>[\s\S]*?<\/w:rt>/g, '')
+    .replace(/<w:r>|<w:r [^>]*>/g, '\u0003').replace(/\u0003([\s\S]*?)<\/w:r>/g, (all, r) => /<w:color w:val="3c763d"/i.test(r) ? r.replace(/(<w:t[^>]*>)([^<]*)(<\/w:t>)/g, '$1\u0001$2\u0002$3') : r)
+    .replace(/\u0003/g, '').replace(/<\/w:p>/g, '\n').replace(/<w:tab\/>/g, ' ').replace(/<w:br[^>]*\/>/g, '\n');
+  const t = x.replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&apos;/g, "'");
+  return t.replace(/\u0002(\s*)\u0001/g, '$1').normalize('NFC').split('\n').map(l => l.replace(/\s+$/, '')).filter(l => l.trim());
+}
+const OPT = /^\s*([1-4])\s*[\.．]\s*(.*)$/;
+function parseTest(lines) {
+  const parts = { 1: [], 2: [] }; let part = 0, buf = [], skip = { noAns: 0, leak: 0 };
+  for (let i = 0; i < lines.length; i++) {
+    const l = fw(lines[i]);
+    const h = l.match(/問題\s*([12])\s*[:：]?\s*(Test|Ngữ|Chữ)/i);
+    if (h) { part = +h[1]; buf = []; continue; }
+    if (!part) continue;
+    const win = [0, 1, 2, 3].map(k => (fw(lines[i + k] || '').match(OPT) || [])[1]);
+    if (win.join('') !== '1234') { buf.push(lines[i]); continue; }
+    // 4 dòng lựa chọn bắt đầu ở i; câu hỏi = các dòng gom được từ sau câu trước
+    const raw = [0, 1, 2, 3].map(k => lines[i + k].replace(/^\s*[1-4１-４]\s*[\.．]\s*/, ''));
+    i += 3;
+    const q0 = buf.join('\n'); buf = [];
+    const ok = raw.map((o, k) => /\(\s*Đúng\s*\)/i.test(o) ? k + 1 : 0).filter(Boolean);
+    const opts = raw.map(o => o.replace(/\(\s*(Đúng|Sai)\s*\)/gi, '').replace(/[\u0001\u0002]/g, '').trim());
+    const m = fw(q0).match(/^\s*(\d{1,2})\s*[\.．、　 ]/);
+    if (ok.length !== 1 || !m) { skip.noAns++; continue; }
+    let q = q0.replace(/^\s*[0-9０-９]{1,2}\s*[\.．、]?\s*/, '').replace(/^[\s　]+/, '');
+    if (part === 2) {
+      if (/\u0001/.test(q)) q = q.replace(/\u0001[^\u0002]*\u0002/g, '（　）');
+      else if (q.includes(opts[ok[0] - 1].replace(/。$/, ''))) { skip.leak++; continue; }   // đáp án nằm sẵn trong câu, không có dấu để xóa → bỏ
+    } else q = q.replace(/\u0001([^\u0002]*)\u0002/g, '【$1】');
+    q = q.replace(/[\u0001\u0002]/g, '').replace(/[ 　]{3,}/g, '　').trim();
+    parts[part].push({ n: +m[1], q, opts, ans: ok[0] });
+  }
+  return { parts, skip };
+}
+{
+  const HEAD = { 1: '＿＿のことばの読み方として最もよいものを、1・2・3・4から一つえらびなさい。', 2: '（　）に何を入れますか。1・2・3・4から いちばん いいものを 一つ えらんでください。' };
+  const KIND = { 1: '漢字読み', 2: '文法形式の判断' };
+  const sK = newSet('N4', 'Dũng Mori · Test tổng hợp · Chữ Hán', 60), sG = newSet('N4', 'Dũng Mori · Test tổng hợp · Ngữ pháp', 61);
+  find(/^N4 Dũng Mori 2024\/01\. Bài giảng\/Bài \d+\/Test tổng hợp\.docx$/i).forEach(d => {
+    const bai = d.match(/Bài (\d+)/)[1], { parts, skip } = parseTest(testLines(FILES[d]));
+    [[1, sK], [2, sG]].forEach(([p, s]) => {
+      const its = parts[p]; if (!its.length) return;
+      const pid = `${s.id}-p${s.passages.length + 1}`;
+      s.passages.push({ pid, type: KIND[p], md: mdOf('N4', KIND[p]), text: `Bài ${bai}\n${HEAD[p]}` });
+      its.forEach((it, k) => s.items.push({ id: `${pid}-${k + 1}`, pid, q: it.q, opts: [it.opts], ans: [it.ans], nopt: 4 }));
+    });
+    report.push(`${skip.noAns || skip.leak ? 'OK*' : 'OK '} N4 Test tổng hợp Bài ${bai}: chữ Hán ${parts[1].length}, ngữ pháp ${parts[2].length}${skip.noAns ? `, bỏ ${skip.noAns} câu không rõ đáp án` : ''}${skip.leak ? `, bỏ ${skip.leak} câu lộ đáp án` : ''}`);
+  });
+  done(sK); done(sG);
+}
+
+/* ===== N5: đề Thi thử có bản "Đáp án" (PDF in từ web, lựa chọn đúng ghi "(Đúng)").
+   Chỉ lấy câu chữ Hán / từ vựng / ngữ pháp (có đủ 4 lựa chọn); phần đọc hiểu có tranh, bảng → bỏ. ===== */
+function n5Kind(head, sec) {
+  if (/ひらがなで/.test(head)) return '漢字読み';
+  if (/どう\s*かきますか|どう\s*書きますか/.test(head)) return '表記';
+  if (/おなじ\s*いみ|同じ\s*意味/.test(head)) return '言い換え類義';
+  if (/★/.test(head)) return '文の組み立て';
+  if (/「\s*\d+\s*」\s*から/.test(head)) return null;            // 文章の文法 (cần cả đoạn văn) → bỏ
+  if (/[（(]\s*[）)]/.test(head)) return sec === 'V' ? '文脈規定' : '文法形式の判断';
+  if (/読んで|よんで/.test(head)) return null;                    // đọc hiểu → bỏ
+  return undefined;                                                  // không rõ → đoán theo câu hỏi
+}
+function parseN5(lines) {
+  const L = lines.filter(l => !/^(https?:|\d+\/\d+\/20\d\d|\d+\/\d+$|\(?\s*もじ|げんごちしき|[（(]もじ)/.test(l.trim()));
+  const qs = []; let kind, sec = 'V', lastHead = 0;
+  const qStart = l => fw(l).match(/^\s*(\d{1,2})\s*[\.．]?\s*(\S.*)$/);
+  const isKana = s => /^[぀-ゟ\s]{1,10}$/.test(s.replace(/[【】]/g, ''));   // dòng furigana rơi ra ngoài
+  const qLike = s => /[（(]\s*[）)]|＿|★|[:：]/.test(s);
+  for (let i = 0; i < L.length; i++) {
+    const h = fw(L[i]).match(/^\s*(?:もんだい|問題)\s*(\d)\s*(.*)$/);
+    if (h) {
+      if (+h[1] <= lastHead && sec === 'V') sec = 'G';               // もんだい１ lần 2 → sang phần ngữ pháp
+      lastHead = +h[1]; kind = n5Kind(h[2] + ' ' + (L[i + 1] || ''), sec); continue;
+    }
+    const m = qStart(L[i]); if (!m || /^\d{1,2}\s*[\.．]\s*$/.test(fw(L[i]))) continue;
+    // khối của câu: đến câu/tiêu đề kế tiếp
+    let j = i + 1; while (j < L.length && !qStart(L[j]) && !/^\s*(もんだい|問題)/.test(L[j])) j++;
+    const blk = L.slice(i, j), d = blk.map((l, k) => /\(\s*Đúng\s*\)/.test(l) ? k : -1).filter(k => k >= 0);
+    const k0 = d.length === 1 ? [d[0] - 3, d[0] - 2, d[0] - 1, d[0]].find(s => s >= 1 && s + 3 < blk.length &&
+      blk.slice(s, s + 4).every(o => !qLike(o) && o.length <= 40) && (s === 1 || qLike(blk[s - 1]) || /、$/.test(blk[s - 2] || '')) &&
+      !(s === 1 && /、\s*$/.test(blk[0]))) : undefined;   // câu hỏi kết thúc bằng "、" → dòng sau là phần còn lại của câu, chưa phải lựa chọn
+    const qText = [m[2], ...(k0 !== undefined ? blk.slice(1, k0) : [])].filter(s => !isKana(s)).join('\n').trim();
+    const kd = kind !== undefined ? kind : /★/.test(qText) ? '文の組み立て' : /[（(]\s*[）)]/.test(qText) ? '文法形式の判断' : null;
+    i = j - 1;
+    if (!kd) continue;
+    if (k0 === undefined) { qs.push({ bad: true }); continue; }
+    const opts = blk.slice(k0, k0 + 4).map(o => o.replace(/\(\s*Đúng\s*\)/, '').replace(/[【】]/g, '').trim());
+    qs.push({ n: +m[1], kind: kd, q: qText, opts, ans: d[0] - k0 + 1 });
+  }
+  return qs;
+}
+async function addN5() {
+  const { pdfLines } = require('./pdf-lines');
+  const SRC = [[1, /Thi thử JLPT 1\/.*Đọc Hiểu - Đáp án\.pdf$/i, 'Ngữ pháp'], [2, /Thi thử JLPT 2\/.*Chữ hán - Đáp án\.pdf$/i, 'Từ vựng–Ngữ pháp']];
+  const HEAD = { '漢字読み': '＿＿の ことばは ひらがなで どう かきますか。', '表記': '＿＿の ことばは どう かきますか。', '文脈規定': '（　）に なにを いれますか。',
+    '言い換え類義': '＿＿の ぶんと だいたい おなじ いみの ぶんは どれですか。', '文法形式の判断': '（　）に 何を 入れますか。', '文の組み立て': '★ に 入る ものは どれですか。' };
+  for (const [k, re, name] of SRC) {
+    const f = find(new RegExp('^N5 Dũng Mori 2024/Đề thi/' + re.source, 'i'))[0];
+    if (!f) { report.push(`BỎ  N5 Thi thử ${k}: không thấy file đáp án`); continue; }
+    const qs = parseN5((await pdfLines(FILES[f])).flat()), bad = qs.filter(q => q.bad).length, good = qs.filter(q => !q.bad);
+    const s = newSet('N5', `Dũng Mori · Thi thử ${k} · ${name}`, 70 + k);
+    good.forEach(q => {
+      let p = s.passages[s.passages.length - 1];
+      if (!p || p.type !== q.kind) { p = { pid: `${s.id}-p${s.passages.length + 1}`, type: q.kind, md: mdOf('N5', q.kind), text: HEAD[q.kind] }; s.passages.push(p); }
+      s.items.push({ id: `${p.pid}-${s.items.filter(x => x.pid === p.pid).length + 1}`, pid: p.pid, q: q.q, opts: [q.opts], ans: [q.ans], nopt: 4 });
+    });
+    report.push(`OK  N5 Thi thử ${k} (${name}): ${good.length} câu${bad ? `, bỏ ${bad} câu không tách được lựa chọn` : ''}`);
+    done(s);
+  }
+}
+
 /* ----- Ghi file ----- */
-const content = { v: 2, slot: 'dm', name: 'Dũng Mori (N3, N2)', sets, exams: [] };
+(async () => {
+await addN5();
+const content = { v: 2, slot: 'dm', name: 'Dũng Mori (N5–N2)', sets, exams: [] };
 fs.writeFileSync(OUT, JSON.stringify(content));
 report.forEach(r => console.log(r));
 console.log(`
 Kiểm tra chéo lựa chọn tô màu: ${COL.n} câu, lệch ${COL.bad.length}`); COL.bad.slice(0, 15).forEach(b => console.log('  LỆCH', b));
 const by = {}; sets.forEach(s => { const k = s.lv + ' ' + (s.kind === 'L' ? 'nghe' : s.passages.some(p => p.md) ? 'từ vựng–ngữ pháp' : 'đọc'); by[k] = (by[k] || 0) + s.items.length; });
 console.log('\nTỔNG:', Object.entries(by).map(([k, v]) => `${k}: ${v} câu`).join(' · '), `· ${sets.length} bộ · ${(fs.statSync(OUT).size / 1024).toFixed(0)} KB → ${OUT}`);
+})();
