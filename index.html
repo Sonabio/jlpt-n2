@@ -1668,6 +1668,7 @@ function migrate(st) {
   const map = { kanji5: KANJI5, kanji4: KANJI4 };
   for (const k of Object.keys(st.srs)) { const m = k.match(/^(kanji5|kanji4):(\d+)$/); if (m && map[m[1]][+m[2]]) { const nk = 'k:' + map[m[1]][+m[2]][0]; if (!st.srs[nk]) st.srs[nk] = st.srs[k]; delete st.srs[k]; } }
   if (st.set && st.set.decks) st.set.decks = [...new Set(st.set.decks.map(id => id === 'kanji5' ? 'kj5' : id === 'kanji4' ? 'kj4' : id))];
+  if (st.set && st.set.decks) { const out = []; st.set.decks.forEach(id => { out.push(id); const m = id.match(/^kj(\d)$/); if (m && !st.set.decks.includes('vb' + m[1])) out.push('vb' + m[1]); }); st.set.decks = [...new Set(out)]; }
   return st;
 }
 /* Thẻ của mình (S.custom), khóa thẻ theo id nên thêm/xóa không làm lệch tiến độ */
