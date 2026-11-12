@@ -1,6 +1,13 @@
 /* ===== ĐỒNG BỘ: gộp dữ liệu giữa các máy + Cloudflare (Worker + D1) ===== */
 const DEV = (() => { try { let d = localStorage.getItem('jlpt-n2-dev'); if (!d) { d = Math.random().toString(36).slice(2, 10); localStorage.setItem('jlpt-n2-dev', d); } return d; } catch (e) { return 'nodev'; } })();
 const LOCAL_SET_KEYS = ['dev', 'romaji', 'typeRev'];
+function devName() {
+  const u = navigator.userAgent;
+  const os = /iPhone/.test(u) ? 'iPhone' : /iPad/.test(u) ? 'iPad' : /Android/.test(u) ? 'Android' : /Mac/.test(u) ? 'Mac' : /Windows/.test(u) ? 'Windows' : /Linux/.test(u) ? 'Linux' : 'Máy';
+  const br = /Edg\//.test(u) ? 'Edge' : /CriOS|Chrome\//.test(u) ? 'Chrome' : /FxiOS|Firefox\//.test(u) ? 'Firefox' : /Safari\//.test(u) ? 'Safari' : 'trình duyệt';
+  let pwa = false; try { pwa = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; } catch (e) { }
+  return os + ' · ' + (pwa ? 'app đã cài' : br);
+}
 
 /* Nhật ký học lưu riêng theo máy (S.dlog[máy][ngày]) rồi cộng lại thành S.log, để 2 máy cùng học một ngày không ghi đè nhau */
 function ensureDlog(st) { if (!st.dlog) { st.dlog = {}; if (st.log && Object.keys(st.log).length) st.dlog.legacy = JSON.parse(JSON.stringify(st.log)); } return st; }
@@ -45,7 +52,7 @@ const CF = {
   load() { try { this.cfg = JSON.parse(localStorage.getItem(this.KEY) || 'null'); } catch (e) { this.cfg = null; } return this.cfg; },
   store() { try { this.cfg ? localStorage.setItem(this.KEY, JSON.stringify(this.cfg)) : localStorage.removeItem(this.KEY); } catch (e) { } },
   async call(path, opts = {}) {
-    const r = await fetch('/api' + path, { method: opts.method || 'GET', body: opts.body ? JSON.stringify(opts.body) : undefined, keepalive: !!opts.keepalive, cache: 'no-store', headers: { 'content-type': 'application/json', ...(this.cfg && this.cfg.key ? { authorization: 'Bearer ' + this.cfg.key } : {}) } });
+    const r = await fetch('/api' + path, { method: opts.method || 'GET', body: opts.body ? JSON.stringify(opts.body) : undefined, keepalive: !!opts.keepalive, cache: 'no-store', headers: { 'content-type': 'application/json', 'x-device': DEV, 'x-device-name': encodeURIComponent(devName()), ...(this.cfg && this.cfg.key ? { authorization: 'Bearer ' + this.cfg.key } : {}) } });
     let j = null; try { j = await r.json(); } catch (e) { }
     if (!r.ok) { const e = new Error((j && j.message) || ('HTTP ' + r.status)); e.status = r.status; e.code = j && j.error; throw e; }
     return j;
@@ -72,6 +79,7 @@ const CF = {
       this.lastOk = Date.now();
       setSync('cloud', 'Đã đồng bộ ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' (Cloudflare)');
       if (changed) rerenderAfterRemote();
+      if (route === 'plan' && !opts.keepalive) { await this.devices(); if (!changed) { const box = document.querySelector('.devlist'); if (box) box.outerHTML = devListHTML(); } }
     } catch (e) {
       if (e.status === 401) { this.cfg = null; this.store(); SY.kind = null; setSync('error', 'Máy này đã bị ngắt (khóa đồng bộ đã đổi). Hãy ghép lại ở mục Kế hoạch.'); }
       else setSync(navigator.onLine === false ? 'local' : 'error', navigator.onLine === false ? 'Đang offline. Tiến độ lưu trên máy, sẽ đồng bộ khi có mạng.' : 'Chưa đồng bộ được (' + (e.message || 'lỗi mạng') + '). Tiến độ vẫn lưu trên máy.');
@@ -101,6 +109,7 @@ const CF = {
   async recover(code) { const r = await this.call('/space/recover', { method: 'POST', body: { recovery: code } }); await this.connectWith(r.key, 'khôi phục'); },
   async createPair() { this.pair = await this.call('/pair/create', { method: 'POST' }); return this.pair; },
   async rotate() { const r = await this.call('/space/rotate', { method: 'POST' }); this.cfg.key = r.key; this.store(); this.pair = null; },
+  async devices() { try { this.devs = await this.call('/devices'); } catch (e) { this.devs = null; } return this.devs; },
   disconnect() { this.cfg = null; this.store(); SY.kind = null; this.pair = null; setSync('local', 'Đã ngắt đồng bộ trên máy này. Tiến độ vẫn lưu trên máy.'); },
 };
 
@@ -114,6 +123,7 @@ function syncUI() {
       <p><b>Đồng bộ Cloudflare đang bật trên máy này.</b> Dữ liệu được gộp theo từng thẻ, nên học trên cả hai máy (kể cả lúc offline) đều không mất.</p>
       ${CF.recovery ? `<div class="expl bad"><b>Lưu mã khôi phục này</b> (chụp màn hình hoặc ghi vào trình quản lý mật khẩu). Dùng khi mất hết các máy đã ghép: <code class="big">${esc(CF.recovery)}</code><div class="row"><button class="btn sm" data-a="cfRecOk">Mình đã lưu</button></div></div>` : ''}
       ${p ? `<div class="pairbox"><p>Trên máy kia: mở app → Kế hoạch → <b>Nhập mã ghép</b>:</p><p class="paircode num">${esc(p.code)}</p><div id="qr" class="qr" aria-label="Mã QR để ghép"></div><p class="hint">Hết hạn lúc ${new Date(p.exp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}. Quét QR mở bằng trình duyệt; với app đã cài trên iPhone hãy nhập mã trong app.</p></div>` : ''}
+      ${devListHTML()}
       <div class="row wrap"><button class="btn pri" data-a="cfPair">${p ? 'Tạo mã mới' : 'Ghép thêm máy'}</button><button class="btn" data-a="cfSync">Đồng bộ ngay</button>
       ${SYU.confirmRotate ? '<button class="btn danger" data-a="cfRotateYes">Đổi khóa: các máy khác phải ghép lại</button><button class="btn ghost" data-a="cfRotateNo">Hủy</button>' : '<button class="btn ghost" data-a="cfRotate">Đổi khóa (ngắt mọi máy khác)</button>'}
       <button class="btn ghost" data-a="cfOff">Ngắt máy này</button></div>
@@ -129,6 +139,11 @@ function syncUI() {
     ${CF.hasOwner === null ? '<p class="hint">Chưa kết nối được máy chủ đồng bộ (offline hoặc máy chủ chưa sẵn sàng).</p>' : ''}
     ${g ? `<p class="hint">Gist cũ: <button class="lnkb lnk" data-a="gistOff">ngắt gist</button></p>` : ''}
   </div>`;
+}
+function devListHTML() {
+  const d = CF.devs; if (!d) return '<p class="hint"><button class="lnkb lnk" data-a="cfDevs">Xem các thiết bị đã ghép</button></p>';
+  const ago = t => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'vừa xong' : m < 60 ? m + ' phút trước' : m < 1440 ? Math.round(m / 60) + ' giờ trước' : Math.round(m / 1440) + ' ngày trước'; };
+  return `<div class="devlist"><p><b>${d.devices.length} thiết bị đã ghép</b></p>${d.devices.map(x => `<div class="devrow"><span>${esc(x.name || 'Máy')}${x.dev === d.me ? ' <span class="tag on">máy này</span>' : ''}</span><span class="muted">đồng bộ ${ago(x.last_seen)}</span>${x.dev === d.me ? '' : `<button class="btn ghost sm" data-a="cfDevRm" data-v="${esc(x.dev)}">Bỏ khỏi danh sách</button>`}</div>`).join('')}<p class="hint">"Bỏ khỏi danh sách" chỉ xóa dòng này; muốn chặn hẳn một máy, dùng Đổi khóa.</p></div>`;
 }
 function drawQR() {
   const el = $('#qr'); if (!el || !CF.pair || typeof qrcode !== 'function') return;
@@ -146,6 +161,8 @@ Object.assign(ACT, {
   cfRotateNo() { SYU.confirmRotate = false; render(); },
   cfRotateYes() { SYU.confirmRotate = false; cfRun(() => CF.rotate(), 'Đã đổi khóa. Máy khác cần ghép lại.'); },
   cfOff() { CF.disconnect(); render(); },
+  cfDevs() { cfRun(() => CF.devices()); },
+  cfDevRm(t) { cfRun(async () => { await CF.call('/devices/remove', { method: 'POST', body: { dev: t.dataset.v } }); await CF.devices(); }); },
   cfRecOk() { CF.recovery = null; render(); },
 });
 /* Mở link #pair-XXXXXXXX (từ QR) → tự ghép */

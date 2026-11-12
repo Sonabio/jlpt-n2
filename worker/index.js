@@ -19,6 +19,7 @@ async function init(db) {
     db.prepare('CREATE TABLE IF NOT EXISTS space (id TEXT PRIMARY KEY, data TEXT, upd INTEGER DEFAULT 0, rev INTEGER DEFAULT 0, summary TEXT, recovery TEXT, created_at INTEGER, updated_at INTEGER)'),
     db.prepare('CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)'),
     db.prepare('CREATE TABLE IF NOT EXISTS pair (code TEXT PRIMARY KEY, k TEXT, exp INTEGER)'),
+    db.prepare('CREATE TABLE IF NOT EXISTS device (space TEXT, dev TEXT, name TEXT, first_seen INTEGER, last_seen INTEGER, PRIMARY KEY (space, dev))'),
   ]);
   ready = true;
 }
@@ -28,7 +29,10 @@ async function auth(req, db) {
   if (key.length < 20) return null;
   const id = await sha(key);
   const row = await db.prepare('SELECT id, upd, rev, updated_at FROM space WHERE id = ?').bind(id).first();
-  return row ? { id, key, row } : null;
+  if (!row) return null;
+  const dev = (req.headers.get('x-device') || '').replace(/[^a-z0-9]/gi, '').slice(0, 16), name = (() => { try { return decodeURIComponent(req.headers.get('x-device-name') || ''); } catch (e) { return ''; } })().slice(0, 60), now = Date.now();
+  if (dev) await db.prepare('INSERT INTO device (space, dev, name, first_seen, last_seen) VALUES (?, ?, ?, ?, ?) ON CONFLICT(space, dev) DO UPDATE SET name = excluded.name, last_seen = excluded.last_seen').bind(id, dev, name, now, now).run();
+  return { id, key, row, dev };
 }
 async function body(req) { try { return await req.json(); } catch (e) { return {}; } }
 
@@ -73,7 +77,9 @@ async function api(req, env, url) {
     const owner = await db.prepare("SELECT v FROM meta WHERE k = 'owner'").first();
     const row = owner ? await db.prepare('SELECT summary, updated_at, rev FROM space WHERE id = ?').bind(owner.v).first() : null;
     if (!row) return err('empty', 'Chưa có dữ liệu.', 404);
-    return json({ lastSync: row.updated_at ? new Date(row.updated_at).toISOString() : null, rev: row.rev, summary: row.summary ? JSON.parse(row.summary) : null });
+    const devs = await db.prepare('SELECT name, first_seen, last_seen FROM device WHERE space = ? ORDER BY last_seen DESC').bind(owner.v).all();
+    const iso = t => t ? new Date(t).toISOString() : null;
+    return json({ lastSync: iso(row.updated_at), rev: row.rev, devices: (devs.results || []).map(d => ({ name: d.name, firstSeen: iso(d.first_seen), lastSeen: iso(d.last_seen) })), summary: row.summary ? JSON.parse(row.summary) : null });
   }
 
   const a = await auth(req, db);
@@ -98,12 +104,19 @@ async function api(req, env, url) {
     await db.prepare('INSERT INTO pair (code, k, exp) VALUES (?, ?, ?)').bind(code, a.key, exp).run();
     return json({ code: code.slice(0, 4) + '-' + code.slice(4), exp });
   }
-  if (p === '/api/space/rotate' && m === 'POST') return rotate(db, a.id);
+  if (p === '/api/devices' && m === 'GET') {
+    const r = await db.prepare('SELECT dev, name, first_seen, last_seen FROM device WHERE space = ? ORDER BY last_seen DESC').bind(a.id).all();
+    return json({ me: a.dev, devices: r.results || [] });
+  }
+  if (p === '/api/devices/remove' && m === 'POST') { const b = await body(req); await db.prepare('DELETE FROM device WHERE space = ? AND dev = ?').bind(a.id, String(b.dev || '')).run(); return json({ ok: true }); }
+  if (p === '/api/space/rotate' && m === 'POST') return rotate(db, a.id, a.dev);
   return err('not_found', 'Không có API này.', 404);
 }
-async function rotate(db, oldId) {
+async function rotate(db, oldId, keepDev) {
   const key = randKey(), id = await sha(key);
   await db.batch([
+    db.prepare('DELETE FROM device WHERE space = ? AND dev != ?').bind(oldId, keepDev || ''),
+    db.prepare('UPDATE device SET space = ? WHERE space = ?').bind(id, oldId),
     db.prepare('UPDATE space SET id = ?, updated_at = ? WHERE id = ?').bind(id, Date.now(), oldId),
     db.prepare("UPDATE meta SET v = ? WHERE k = 'owner' AND v = ?").bind(id, oldId),
     db.prepare('DELETE FROM pair'),
