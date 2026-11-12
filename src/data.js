@@ -742,34 +742,37 @@ const FORMS = [
 
 /* Lộ trình */
 const STAGES = [
-  { n: 'Chữ', goal: 'Hiragana + katakana đọc/viết trôi chảy', time: '2–3 tuần', out: 'Đọc được mọi chữ kana', decks: ['hira', 'kata'] },
-  { n: 'N5', goal: '~100 kanji, ~800 từ, ngữ pháp 7.1, chia ます/て/ない/た', time: '3 tháng', out: 'Giới thiệu bản thân, mua sắm, hỏi đường', decks: ['kanji5', 'radical', 'g5'] },
-  { n: 'N4', goal: '~300 kanji, ~1.500 từ, ngữ pháp 7.2, khả năng/bị động/sai khiến', time: '3–4 tháng', out: 'Nói chuyện đơn giản ở lab, cửa hàng, bệnh viện', decks: ['kanji4', 'g4', 'jita'] },
-  { n: 'N3', goal: '~650 kanji, ~3.700 từ, ngữ pháp 7.3, đọc NHK Easy', time: '5–6 tháng', out: 'Đọc thông báo, email đơn giản, nghe hội thoại', decks: ['g3', 'v-life', 'v-health', 'v-work', 'fukugo', 'kaiwa', 'keigo'] },
-  { n: 'N2', goal: '~1.000 kanji, ~6.000 từ, ngữ pháp 7.4, đọc báo', time: '6–8 tháng (1,5–2 h/ngày)', out: 'Đọc báo, nghe bản tin, làm việc ở công ty Nhật', decks: ['g2', 'v-mt', 'v-study', 'v-econ', 'fukushi', 'gokei', 'nise', 'senmon'] },
+  { n: 'Chữ', goal: 'Hiragana + katakana đọc/viết trôi chảy', time: 'đã xong', out: 'Đọc được mọi chữ kana', decks: ['hira', 'kata'] },
+  { n: 'N5', goal: 'Củng cố N5: 79 kanji, ~720 từ, ngữ pháp N5', time: '11–12/2026', out: 'Giới thiệu bản thân, mua sắm, hỏi đường', decks: ['kj5', 'vb5', 'g5'] },
+  { n: 'N4', goal: '166 kanji, ~670 từ, ngữ pháp N4 (khả năng, bị động, sai khiến)', time: '1–2/2027', out: 'Nói chuyện đơn giản ở lab, cửa hàng, bệnh viện', decks: ['kj4', 'vb4', 'g4', 'jita'] },
+  { n: 'N3', goal: '367 kanji, ~2.140 từ, ngữ pháp N3, đọc NHK Easy', time: '3–9/2027', out: 'Nói chuyện 10 phút về nghiên cứu, đọc thông báo, email', decks: ['kj3', 'vb3', 'g3', 'keigo', 'kaiwa', 'fukugo', 'v-life', 'v-health', 'v-work'] },
+  { n: 'N2', goal: '367 kanji, ~1.810 từ, ngữ pháp N2; 5–6/2028 luyện đề mỗi tuần', time: '10/2027–6/2028', out: 'Đọc báo, nghe bản tin, họp lab bằng tiếng Nhật', decks: ['kj2', 'vb2', 'g2', 'fukushi', 'gokei', 'nise', 'senmon', 'v-mt', 'v-study', 'v-econ'] },
+  { n: 'N1', goal: '1.232 kanji, ~2.700 từ, ngữ pháp N1', time: 'sau khi đỗ N2', out: 'Đọc tài liệu chuyên ngành, làm việc chuyên môn', decks: ['kj1', 'vb1', 'g1'] },
 ];
 const MILESTONES = [
-  ['11/2026 → 7/2027', 'Nhẹ 45–60 phút/ngày song song IELTS: N5 → N4, kanji, nghe đời sống'],
-  ['8/2027 →', 'Tăng lên 1,5–2 giờ/ngày'],
-  ['12/2027', 'Thi N4 (làm quen đề)'],
-  ['7/2028', 'Thi N3 (hoặc thẳng N2 nếu tiến nhanh)'],
-  ['12/2028', 'Thi N2'],
+  ['11/2026 → 2/2027', 'Cố định 14 giờ/tuần (2 giờ/ngày): chắc N5, xong N4'],
+  ['3/2027 → 9/2027', 'N3: mỗi ngày khoảng 12 từ, 3 kanji, 2 mẫu ngữ pháp'],
+  ['10/2027 → 4/2028', 'N2: từ vựng, kanji, ngữ pháp N2; đọc báo, nghe tin'],
+  ['3/2028', 'Đăng ký MyJLPT cho kỳ tháng 7 (kiểm tra hạn trên jlpt.jp)'],
+  ['5/2028 → 6/2028', 'Luyện đề: mỗi Chủ nhật 1 đề đủ giờ, sửa phần yếu'],
+  ['2/7/2028', 'Thi N2 lần 1 (ngày dự kiến)'],
+  ['8/2028 → 12/2028', 'Nếu chưa đỗ: ôn theo điểm phần yếu, thi lại 3/12/2028 (dự kiến); thi đến khi đỗ'],
+  ['Sau khi đỗ N2', 'Chuyển sang N1 (dữ liệu đã có sẵn trong app)'],
 ];
-const SESSION = [
-  ['Anki', 15, 'Ôn thẻ đến hạn trong app (kanji + từ vựng)'],
-  ['Ngữ pháp mới', 15, '2–3 mẫu, mỗi mẫu tự đặt 2 câu về lab, xử lý nước, nhà trọ'],
-  ['Đọc', 15, 'Giáo trình → NHK News Web Easy → báo thật'],
-  ['Nghe + shadowing', 15, 'Bài nghe, podcast, rồi nhại theo 5 phút'],
-];
+const DAY_PLAN = {
+  phone: [['Học mới từ + kanji', 20, 'learn'], ['Nghe', 10, 'learn'], ['Ôn: chọn + gõ', 10, 'learn'], ['Ôn thẻ đến hạn', 20, 'review']],
+  laptop: [['Ngữ pháp mới', 20, 'learn'], ['Nghe / shadowing', 15, 'learn'], ['Ôn ngữ pháp: chọn + gõ', 15, 'learn'], ['Luyện gõ', 10, 'typing']],
+};
+const WEEK_MIN = 840, DAY_MIN = 120;
 /* Lịch tuần: index 0 = Chủ nhật (JS getDay) */
 const WEEK = [
-  ['CN', 'Nghỉ hoặc "học ngoài đời": nói chuyện, xem phim tiếng Nhật'],
-  ['T2', 'Ngữ pháp: 3 mẫu mới + đặt câu'],
-  ['T3', 'Từ vựng + kanji theo bài'],
-  ['T4', 'Nghe + shadowing'],
-  ['T5', 'Ngữ pháp: 3 mẫu mới + đặt câu'],
-  ['T6', 'Đọc 1 bài + tra từ'],
-  ['T7', 'Ôn tuần: quiz, sửa lỗi'],
+  ['CN', 'Không học mới: ôn hết thẻ đến hạn, làm lại câu sai, xem báo cáo tuần; từ 5/2028 làm 1 đề thi thử'],
+  ['T2', 'Điện thoại: từ + kanji · Laptop: ngữ pháp mới + gõ'],
+  ['T3', 'Điện thoại: từ + kanji · Laptop: ngữ pháp + đọc 1 bài ngắn'],
+  ['T4', 'Điện thoại: từ + kanji · Laptop: ngữ pháp + nghe/shadowing'],
+  ['T5', 'Điện thoại: từ + kanji · Laptop: ngữ pháp mới + gõ'],
+  ['T6', 'Điện thoại: từ + kanji · Laptop: ngữ pháp + đọc 1 bài ngắn'],
+  ['T7', 'Điện thoại: từ + kanji · Laptop: luyện dạng đề (問題1/3/7/8) + gõ câu'],
 ];
 const CHECKLIST = [
   'Đã đăng ký trên MyJLPT, in phiếu dự thi (受験票), dán ảnh đúng quy cách',
@@ -1091,3 +1094,113 @@ N2|econ|減少|げんしょう|giảm thiểu|giảm|人口が減少している
 N2|econ|割合|わりあい|—|tỷ lệ|女性の割合が高い。
 N2|econ|実態|じったい|thực thái|thực trạng|調査で実態が分かった。
 `);
+
+/* Ngữ pháp N1 (tự soạn, ~110 mẫu phổ biến; ví dụ tự viết) */
+const G1 = L(`
+～が早いか|vừa mới… thì ngay|ベルが鳴る[が早いか]、学生たちは教室を飛び出した。
+～や否や|vừa… là lập tức|ドアが開く[や否や]、子どもが走り込んできた。
+～なり|vừa… thì liền (bất ngờ)|彼は部屋に入る[なり]、泣き出した。
+～そばから|vừa… thì lại (lặp lại)|覚えた[そばから]忘れてしまう。
+～てからというもの|kể từ khi… (thay đổi hẳn)|留学して[からというもの]、彼は積極的になった。
+～をもって|bằng, với; vào lúc (mốc kết thúc)|本日[をもって]受付を終了いたします。
+～を限りに|lấy… làm mốc cuối|今日[を限りに]タバコをやめる。
+～に至るまで|cho đến cả|服装から髪型[に至るまで]校則で決められている。
+～に至って(は)|đến mức… (mới)|事故が起きる[に至って]、ようやく対策がとられた。
+～に至っては|còn về… thì (cực đoan hơn)|兄は数学が苦手だが、弟[に至っては]計算もできない。
+～を皮切りに|bắt đầu từ…|東京[を皮切りに]、全国でコンサートを行う。
+～をよそに|bất chấp, mặc kệ|親の心配[をよそに]、彼は一人で旅に出た。
+～をものともせず|không hề nao núng trước|嵐[をものともせず]、救助隊は出発した。
+～をおいて|ngoài… ra thì không|この仕事を任せられるのは彼[をおいて]ほかにいない。
+～をもってすれば|nếu dùng/với… thì|彼の実力[をもってすれば]、合格は間違いない。
+～ならでは|chỉ… mới có|これは京都[ならでは]の味だ。
+～にあって|ở trong (hoàn cảnh)|困難な状況[にあって]も、彼は冷静だった。
+～にかかわる|liên quan đến (điều hệ trọng)|これは命[にかかわる]問題だ。
+～に即して|theo đúng, dựa sát|事実[に即して]報告してください。
+～に照らして|đối chiếu với|法律[に照らして]判断する。
+～を踏まえて|dựa trên, xét đến|前回の結果[を踏まえて]、計画を修正した。
+～を余儀なくされる|buộc phải (ngoài ý muốn)|台風のため、試合は中止[を余儀なくされた]。
+～を禁じ得ない|không kìm được (cảm xúc)|被害者の話に涙[を禁じ得ない]。
+～ずにはおかない|chắc chắn sẽ gây ra|彼の演説は聴衆を感動させ[ずにはおかない]。
+～ずにはすまない|không thể không (làm cho xong)|迷惑をかけたのだから、謝ら[ずにはすまない]。
+～ないではおかない|nhất định sẽ|この映画は見る人を考えさせ[ないではおかない]。
+～までもない|không cần phải|そんなことは言う[までもない]。
+～には及ばない|không cần đến|わざわざ来る[には及ばない]。
+～に足る|đáng, đủ để|彼は信頼する[に足る]人物だ。
+～に堪える|đáng để; chịu được|この作品は鑑賞[に堪える]。
+～に堪えない|không chịu nổi (khi nhìn/nghe)|聞く[に堪えない]悪口だ。
+～に値する|đáng (giá trị)|この本は一読[に値する]。
+～てやまない|luôn mong mỏi, không ngừng|皆様の成功を願って[やまない]。
+～極まる / 極まりない|cực kỳ|彼の態度は失礼[極まりない]。
+～の至り|vô cùng (trang trọng)|このような賞をいただき、光栄[の至り]です。
+～の極み|tột cùng|ぜいたく[の極み]を尽くした食事。
+～とあって|vì là (dịp đặc biệt)|連休[とあって]、観光地は込んでいる。
+～とあれば|nếu là (vì… thì sẵn sàng)|子どものため[とあれば]、何でもする。
+～ともなると / ともなれば|khi đã đến mức/cấp|社長[ともなると]、責任が重い。
+～たるもの|đã là… thì phải|教師[たるもの]、生徒の手本でなければならない。
+～ともあろう|đường đường là… mà|大臣[ともあろう]人が、うそをつくとは。
+～ではあるまいし|có phải là… đâu mà|子ども[ではあるまいし]、一人でできるでしょう。
+～ならいざしらず|nếu là… thì không nói, chứ|子ども[ならいざしらず]、大人がそんなことをするとは。
+～ものを|giá mà… (thế mà)|早く言えばいい[ものを]、なぜ黙っていたの。
+～と思いきや|cứ tưởng là… ai ngờ|晴れる[と思いきや]、急に雨が降り出した。
+～とはいえ|tuy nói là… nhưng|春[とはいえ]、まだ寒い。
+～といえども|dù là… cũng|子ども[といえども]、ルールは守るべきだ。
+～ところを|đang lúc… mà (xin lỗi/cảm ơn)|お忙しい[ところを]ありがとうございます。
+～とも|dù… cũng (= ても, văn viết)|どんなに苦しく[とも]、最後までやる。
+～であれ / であろうと|dù là… đi nữa|理由が何[であれ]、遅刻はいけない。
+～であれ～であれ|dù là… hay…|大人[であれ]子どもであれ、ルールは同じだ。
+～なりとも|dù chỉ là chút ít|少し[なりとも]お役に立てれば嬉しいです。
+～ながらに|nguyên trạng, vẫn còn|彼は生まれ[ながらに]才能を持っていた。
+～つ～つ|lúc… lúc… (qua lại)|行き[つ]戻りつ考えた。
+～かたがた|nhân tiện, kết hợp|お礼[かたがた]、ご挨拶に伺いました。
+～がてら|nhân tiện, tiện thể|散歩[がてら]、買い物に行った。
+～かたわら|bên cạnh việc chính|彼は会社に勤める[かたわら]、小説を書いている。
+～なり～なり|hoặc… hoặc|電話[なり]メールなりで連絡してください。
+～といい～といい|cả… lẫn… (đều)|色[といい]形といい、申し分ない。
+～といわず～といわず|không kể… hay…, khắp|手[といわず]足といわず、泥だらけだ。
+～なくして(は)|nếu không có… thì không|努力[なくして]成功はない。
+～なしに(は)|không có…|許可[なしに]入ってはいけない。
+～ことなしに|mà không…|人の助けを借りる[ことなしに]生きることはできない。
+～ずとも|dù không… cũng|言わ[ずとも]分かる。
+～ないまでも|dù không đến mức… thì ít nhất|毎日とは言わ[ないまでも]、週に一度は運動したい。
+～んがため(に)|nhằm mục đích (văn viết)|夢を実現せ[んがため]、努力を続けている。
+～べく|để (văn viết)|試験に合格す[べく]、毎日勉強している。
+～べからず|cấm, không được|芝生に入る[べからず]。
+～べくもない|không thể nào|素人の私には、プロに勝つ[べくもない]。
+～まじき|không được phép (đối với tư cách)|教師にある[まじき]行為だ。
+～にたえない|vô cùng (cảm xúc)|感謝[にたえない]。
+～かぎりだ|hết sức, vô cùng|一人で外国へ行くのは心細い[かぎりだ]。
+～とばかりに|như muốn nói rằng|彼は「帰れ」[とばかりに]ドアを指さした。
+～んばかりに|như sắp…|泣き出さ[んばかりの]顔をしていた。
+～と言わんばかりに|cứ như muốn nói|もう話すことはない[と言わんばかりに]、彼は席を立った。
+～ともなく / ともなしに|vô tình, không chủ ý|見る[ともなく]テレビを見ていた。
+～に先駆けて|đi đầu, trước|他社[に先駆けて]新製品を発表した。
+～を機に|nhân dịp|結婚[を機に]、仕事を辞めた。
+～いかんによって|tùy vào|結果の[いかんによって]は、計画を中止する。
+～いかんにかかわらず|bất kể… như thế nào|理由の[いかんにかかわらず]、返金はしない。
+～いかんを問わず|không kể|国籍の[いかんを問わず]、応募できる。
+～によらず|không tùy thuộc vào|年齢[によらず]、誰でも参加できる。
+～はおろか|đừng nói đến… ngay cả|漢字[はおろか]、ひらがなも書けない。
+～もさることながら|… thì đã đành, … còn|味[もさることながら]、見た目も美しい。
+～はさておき|tạm gác… sang một bên|冗談[はさておき]、本題に入ろう。
+～すら|ngay cả (nhấn mạnh)|忙しくて、食事をする時間[すら]ない。
+～だに|ngay cả… cũng không|想像する[だに]恐ろしい。
+～たりとも|dù chỉ một… cũng không|一円[たりとも]無駄にできない。
+～にして|ở (mức)…; mãi đến… mới|40歳[にして]、初めて海外へ行った。
+～までだ / までのことだ|chỉ việc… là xong|だめなら、もう一度やる[までだ]。
+～てしかるべきだ|đáng lẽ phải|彼の努力は評価されて[しかるべきだ]。
+～てはばからない|không ngại, thẳng thừng|彼は自分が天才だと言って[はばからない]。
+～にもほどがある|… cũng phải có giới hạn|冗談[にもほどがある]。
+～始末だ|rốt cuộc thì (kết cục tệ)|彼はお金を使い果たし、借金までする[始末だ]。
+～っぱなし|để nguyên, cứ… mãi|窓を開け[っぱなし]にしないで。
+～ずくめ|toàn là|今年はいいこと[ずくめ]だった。
+～まみれ|dính đầy (bẩn)|汗[まみれ]になって働いた。
+～めく|có vẻ, mang dáng dấp|春[めいて]きた。
+～びる|trông như, ra vẻ|大人[びた]話し方をする。
+～ごとき / ごとく|như là (văn viết)|前に述べた[ごとく]、計画を変更する。
+～きらいがある|có khuynh hướng (xấu)|彼は物事を大げさに言う[きらいがある]。
+～をおして|bất chấp (khó khăn)|病気[をおして]会議に出席した。
+～が最後|một khi đã… thì (hết đường)|彼に話した[が最後]、みんなに知られてしまう。
+～ようによっては|tùy cách…|考え[ようによっては]、失敗もいい経験だ。
+～にひきかえ|trái ngược với|兄[にひきかえ]、弟はよく勉強する。
+`);
+GRAMMAR.push(...G1.map(r => ({ lv: 'N1', gr: '', p: r[0], m: r[1], x: r[2] })));

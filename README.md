@@ -5,13 +5,13 @@ App học và ôn thi tiếng Nhật từ con số 0 đến JLPT N2, chạy như
 **Mở app:** https://jlpt-n2.mylifegame-platform.workers.dev/ (Cloudflare, tự deploy mỗi lần push lên `main`)
 
 ## Tính năng
-- **Hôm nay:** đếm ngược kỳ thi, thẻ đến hạn, lịch hôm nay, buổi học 60′ có hẹn giờ, chuỗi ngày học, tiến độ lộ trình.
-- **Kiểm tra trình độ:** bài thích ứng Chữ → N5 → N2 (6 kỹ năng, có nghe), gợi ý giai đoạn và bộ thẻ.
-- **Ôn thẻ (FSRS-4.5):** 23 bộ thẻ: kana, kanji N5 + N4, bộ thủ, ngữ pháp N5–N2, kính ngữ, phó từ, tự/tha động từ, bạn giả Hán-Việt, từ vựng theo 6 chủ đề (môi trường & xử lý nước, công việc, đời sống, sức khỏe, nghiên cứu, kinh tế), và **Thẻ của mình** (tự thêm hoặc nhập CSV).
-- **Luyện tập:** 10 dạng: 問題1 đọc kanji, 問題3 tiền tố/hậu tố, 問題7 ngữ pháp, 問題8 sắp xếp ★, nghĩa ngữ pháp, chia động từ, trợ từ, kính ngữ, tự/tha, theo bộ thẻ; cộng chế độ **Nghe & shadowing**.
-- **Tra cứu:** ngữ pháp có lọc, Hán-Việt → âm On (có công cụ đoán), kanji, chia động từ, kính ngữ, trợ từ, văn nói, mẹo phân biệt.
-- **Thi thử:** đồng hồ 105′ + 50′, chấm đỗ/trượt (N2–N5), lịch sử điểm.
-- **Kế hoạch:** kỳ thi mục tiêu, giai đoạn, lịch tuần, checklist, **nhắc học hằng ngày** (Google Calendar / .ics), mẫu câu hỏi Claude, cài đặt.
+- **Dữ liệu N5–N1:** 2.211 kanji (có Hán-Việt), 8.034 từ vựng, ngữ pháp N5–N1 (~360 mẫu). Xem `ATTRIBUTION.md`.
+- **Học (luồng chính):** Học mới → Nghe → Chọn đáp án → Gõ đáp án; tự chấm vào lịch ôn FSRS. Điện thoại ưu tiên từ vựng + kanji; laptop ưu tiên ngữ pháp.
+- **Luyện gõ:** hướng dẫn bộ gõ tiếng Nhật (Windows, macOS, iPhone, Android), gõ từ ra kanji, nghe rồi gõ, gõ câu; đo độ chính xác và ký tự/phút. Tùy chọn tự đổi romaji → kana.
+- **Ôn thẻ (FSRS-4.5):** có chế độ gõ đáp án trước khi lật.
+- **Hôm nay:** kế hoạch 2 giờ theo thiết bị, phút học tự đếm, báo cáo tuần (mục tiêu 840 phút).
+- **Kiểm tra trình độ, Luyện tập (10 dạng), Tra cứu, Thi thử, Kế hoạch** như trước.
+- **Đồng bộ:** GitHub Gist (`jlpt-n2-progress.json` + `jlpt-n2-weekly.json` cho báo cáo tự động).
 
 ## Cài lên máy
 - **iPhone (Safari):** mở link → nút Chia sẻ → *Thêm vào MH chính*.
@@ -31,7 +31,9 @@ Token chỉ nằm trong trình duyệt của thiết bị đó, không có trong
 src/data.js     nội dung (từ JLPT_N2_tong_hop.md)
 src/app.js      logic, FSRS, quiz, thẻ của mình, đồng bộ
 src/placement.js  bài kiểm tra trình độ
+src/flow.js     luồng học, luyện gõ, thiết bị, báo cáo tuần
 src/boot.js     khởi động
+data/*.js       dữ liệu kanji, từ vựng (sinh bằng tools/build_data.py)
 src/head.html   giao diện (CSS + khung trang)
 build.sh        ghép thành index.html (PWA) và artifact.html (bản claude.ai)
 index.html      file GitHub Pages phục vụ

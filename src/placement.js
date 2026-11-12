@@ -115,7 +115,7 @@ function ptLabel(r) {
 }
 /* Gợi ý bộ thẻ: giai đoạn kế tiếp + giữ cấp vừa đạt nếu chưa vững (khối < 85% hoặc kỹ năng < 50%) */
 const SOLID = 0.85;
-const LV_SKILL_DECKS = { 'Chữ': { kana: ['hira', 'kata'] }, N5: { kanji: ['kanji5'], vocab: ['kanji5'], grammar: ['g5'] }, N4: { kanji: ['kanji4'], vocab: ['jita'], grammar: ['g4'] }, N3: { kanji: ['v-work', 'v-life'], vocab: ['v-life', 'v-health'], grammar: ['g3'] }, N2: { kanji: ['v-study', 'v-mt'], vocab: ['v-econ', 'fukushi'], grammar: ['g2'] } };
+const LV_SKILL_DECKS = { 'Chữ': { kana: ['hira', 'kata'] }, N5: { kanji: ['kj5'], vocab: ['vb5'], grammar: ['g5'] }, N4: { kanji: ['kj4'], vocab: ['vb4', 'jita'], grammar: ['g4'] }, N3: { kanji: ['kj3'], vocab: ['vb3'], grammar: ['g3'] }, N2: { kanji: ['kj2'], vocab: ['vb2'], grammar: ['g2'] } };
 function ptPlan(r) {
   const lab = ptLabel(r), next = STAGES[lab.stage].decks.slice(), keep = [], why = [];
   const topBlock = r.lv.find(b => b.lv === r.top);
@@ -196,7 +196,7 @@ Object.assign(ACT, {
   ptNext() { ptNext(); render(); window.scrollTo(0, 0); },
   ptPlay() { const q = ptCur(); if (q) speak(q.q); },
   ptClose() { PT = null; render(); },
-  ptApply() { const r = PT.res; const plan = ptPlan(r); S.set.decks = plan.decks; S.set.newPer = plan.newPer; save(); toast(`Đã áp dụng: ${plan.decks.length} bộ thẻ, ${plan.newPer} thẻ mới/ngày`); PT = null; go('review'); },
+  ptApply() { const r = PT.res; const plan = ptPlan(r); S.set.decks = plan.decks; S.set.newPer = plan.newPer; save(); toast(`Đã áp dụng: ${plan.decks.length} bộ thẻ, ${plan.newPer} thẻ mới/ngày`); PT = null; go('learn'); },
   ptView() { const last = (S.place || []).slice(-1)[0]; if (!last) return; PT = { done: true, res: last }; if (route !== 'practice') go('practice'); else render(); window.scrollTo(0, 0); },
 });
 document.addEventListener('keydown', e => {

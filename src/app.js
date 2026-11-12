@@ -27,20 +27,38 @@ async function copyText(text) {
 
 /* ===== DECKS ===== */
 const DECKS = [];
-function deck(id, name, lv, cards, small = false) { DECKS.push({ id, name, lv, small, cards: cards.map((c, i) => ({ ...c, k: id + ':' + i, d: id })) }); }
-deck('hira', 'Hiragana', 'Chữ', KANA.map(([h, r]) => ({ f: h, m: r })));
-deck('kata', 'Katakana', 'Chữ', KANA.map(([h, r]) => ({ f: toKata(h), m: r })));
-deck('kanji5', 'Kanji N5', 'N5', KANJI5.map(([c, hv, on, kun, m, ex]) => ({ f: c, hv, r: `On ${on} · Kun ${kun}`, m, x: ex, say: ex.split(' ')[0] })));
-deck('radical', 'Bộ thủ', 'N5', RADICALS.map(([b, hv, m, ex]) => ({ f: b, hv, m, x: 'Ví dụ: ' + ex })));
-deck('g5', 'Ngữ pháp N5', 'N5', G5.map(([p, m, x]) => ({ f: p, m, x: unbr(x) })), true);
-deck('kanji4', 'Kanji N4', 'N4', KANJI4.map(([c, hv, on, kun, m, ex]) => ({ f: c, hv, r: `On ${on} · Kun ${kun}`, m, x: ex, say: ex.split(' ')[0] })));
-deck('g4', 'Ngữ pháp N4', 'N4', G4.map(([p, m, x]) => ({ f: p, m, x: unbr(x) })), true);
+function deck(id, name, lv, cards, small = false, kind = 'vocab') { DECKS.push({ id, name, lv, small, kind, cards: cards.map((c, i) => ({ ...c, k: c.k || id + ':' + i, d: id })) }); }
+/* Dữ liệu lớn N5–N1 (data/kanji.js, data/vocab.js); ghép nghĩa tiếng Việt tự soạn khi có */
+const HAS_BULK = typeof KJ !== 'undefined' && typeof VB !== 'undefined';
+const VI_KANJI = {}; [...KANJI5, ...KANJI4].forEach(([c, hv, on, kun, m, ex]) => { VI_KANJI[c] = { hv, m, ex }; });
+const VI_WORD = {}; VOCAB.forEach(v => { VI_WORD[v[2]] = { m: v[5], x: v[6], hv: v[4] }; }); SENMON.forEach(v => { VI_WORD[v[0]] = VI_WORD[v[0]] || { m: v[3], hv: v[2] }; }); NISE.forEach(v => { VI_WORD[v[0]] = { m: v[3] + ' (khác nghĩa tiếng Việt)', hv: v[2] }; });
+const isKanji = ch => ch >= '\u4e00' && ch <= '\u9fff';
+const KJ_EX = {};
+if (HAS_BULK) VB.forEach(([w, r]) => { if (r) for (const ch of w) if (isKanji(ch) && !KJ_EX[ch]) KJ_EX[ch] = [w, r]; });
+deck('hira', 'Hiragana', 'Chữ', KANA.map(([h, r]) => ({ f: h, m: r })), false, 'kana');
+deck('kata', 'Katakana', 'Chữ', KANA.map(([h, r]) => ({ f: toKata(h), m: r })), false, 'kana');
+if (HAS_BULK) {
+  [5, 4, 3, 2, 1].forEach(lv => deck('kj' + lv, 'Kanji N' + lv, 'N' + lv, KJ.filter(k => k[1] === lv).map(([c, l, hv, on, kun, en]) => {
+    const vi = VI_KANJI[c]; const ex = vi ? vi.ex.split(' · ')[0] : (KJ_EX[c] ? KJ_EX[c].join(' ') : '');
+    const [ew, er] = ex.split(' ');
+    return { k: 'k:' + c, f: c, hv: vi ? vi.hv : hv, on, kun, r: `On ${on || '—'} · Kun ${kun || '—'}`, m: vi ? vi.m : en, en: vi ? en : '', x: ex, ew, er, say: ew || c };
+  }), false, 'kanji'));
+  [5, 4, 3, 2, 1].forEach(lv => deck('vb' + lv, 'Từ vựng N' + lv, 'N' + lv, VB.filter(v => v[4] === lv).map(([w, r, en, hv]) => {
+    const vi = VI_WORD[w];
+    return { k: 'w:' + w + '|' + r, f: w, r, hv: vi && vi.hv && vi.hv !== '—' ? vi.hv : hv, m: vi ? vi.m : en, en: vi ? en : '', x: (vi && vi.x) || '', say: r || w };
+  })));
+} else deck('kanji5', 'Kanji N5', 'N5', KANJI5.map(([c, hv, on, kun, m, ex]) => ({ f: c, hv, r: `On ${on} · Kun ${kun}`, m, x: ex, say: ex.split(' ')[0] })), false, 'kanji');
+deck('radical', 'Bộ thủ', 'N5', RADICALS.map(([b, hv, m, ex]) => ({ f: b, hv, m, x: 'Ví dụ: ' + ex })), false, 'radical');
+deck('g5', 'Ngữ pháp N5', 'N5', G5.map(([p, m, x]) => ({ f: p, m, x: unbr(x), xb: x })), true, 'grammar');
+if (!HAS_BULK) deck('kanji4', 'Kanji N4', 'N4', KANJI4.map(([c, hv, on, kun, m, ex]) => ({ f: c, hv, r: `On ${on} · Kun ${kun}`, m, x: ex, say: ex.split(' ')[0] })), false, 'kanji');
+deck('g4', 'Ngữ pháp N4', 'N4', G4.map(([p, m, x]) => ({ f: p, m, x: unbr(x), xb: x })), true, 'grammar');
 deck('jita', 'Tự / tha động từ', 'N4', JITA.map(([a, b, m]) => ({ f: '自 ' + a, m: 'Tha (を): ' + b, n: m, say: a })), true);
-deck('g3', 'Ngữ pháp N3', 'N3', G3.map(([p, m, x]) => ({ f: p, m, x: unbr(x) })), true);
+deck('g3', 'Ngữ pháp N3', 'N3', G3.map(([p, m, x]) => ({ f: p, m, x: unbr(x), xb: x })), true, 'grammar');
 deck('keigo', 'Kính ngữ', 'N3', KEIGO.map(([a, s, k]) => ({ f: a, m: `尊敬: ${s}`, n: `謙譲: ${k}` })), true);
 deck('kaiwa', 'Văn nói rút gọn', 'N3', KAIWA.map(([a, b, x]) => ({ f: a, m: 'Gốc: ' + b, x })), true);
 deck('fukugo', 'Động từ ghép', 'N3', FUKUGO.map(([a, m, x]) => ({ f: a, m, x })), true);
-deck('g2', 'Ngữ pháp N2', 'N2', G2.map(([g, p, m, x]) => ({ f: p, m, x: unbr(x), n: G2_GROUPS[g] })), true);
+deck('g2', 'Ngữ pháp N2', 'N2', G2.map(([g, p, m, x]) => ({ f: p, m, x: unbr(x), xb: x, n: G2_GROUPS[g] })), true, 'grammar');
+deck('g1', 'Ngữ pháp N1', 'N1', G1.map(([p, m, x]) => ({ f: p, m, x: unbr(x), xb: x })), true, 'grammar');
 deck('fukushi', 'Phó từ N2', 'N2', FUKUSHI.map(([a, m, x]) => ({ f: a, m, x })), true);
 deck('gokei', 'Tiền tố / hậu tố', 'N2', GOKEI.map(([a, m, x]) => ({ f: a, m, x: 'Ví dụ: ' + x })), true);
 deck('nise', 'Bạn giả Hán-Việt', 'N2', NISE.map(([w, r, hv, m]) => ({ f: w, r, hv, m, n: 'Nghĩa khác tiếng Việt' })));
@@ -48,10 +66,21 @@ deck('senmon', 'Từ ngành môi trường', 'N3', SENMON.map(([w, r, hv, m]) =>
 Object.entries(VOCAB_TOPICS).forEach(([id, name]) => deck('v-' + id, 'Từ vựng: ' + name, id === 'econ' || id === 'mt' || id === 'study' ? 'N2' : 'N3', VOCAB.filter(v => v[1] === id).map(([lv, t, w, r, hv, m, x]) => ({ f: w, r, hv: hv === '—' ? '' : hv, m, x, n: lv, say: x }))));
 const DECK = Object.fromEntries(DECKS.map(d => [d.id, d]));
 const CARD = {}; DECKS.forEach(d => d.cards.forEach(c => CARD[c.k] = c));
+['jita', 'keigo', 'kaiwa', 'fukugo', 'gokei'].forEach(id => { if (DECK[id]) DECK[id].kind = 'pair'; });
+/* Chuyển tiến độ cũ (khóa theo thứ tự) sang khóa theo chữ/từ */
+function migrate(st) {
+  if (!st) return st;
+  if (st.set && !st.set.daily) st.set.daily = { w: 12, k: 3, g: 2 };
+  if (!HAS_BULK || !st.srs) return st;
+  const map = { kanji5: KANJI5, kanji4: KANJI4 };
+  for (const k of Object.keys(st.srs)) { const m = k.match(/^(kanji5|kanji4):(\d+)$/); if (m && map[m[1]][+m[2]]) { const nk = 'k:' + map[m[1]][+m[2]][0]; if (!st.srs[nk]) st.srs[nk] = st.srs[k]; delete st.srs[k]; } }
+  if (st.set && st.set.decks) st.set.decks = [...new Set(st.set.decks.map(id => id === 'kanji5' ? 'kj5' : id === 'kanji4' ? 'kj4' : id))];
+  return st;
+}
 /* Thẻ của mình (S.custom), khóa thẻ theo id nên thêm/xóa không làm lệch tiến độ */
 function buildCustom() {
   let d = DECK.mine;
-  if (!d) { d = { id: 'mine', name: 'Thẻ của mình', lv: 'Mình', small: false, cards: [] }; DECKS.unshift(d); DECK.mine = d; }
+  if (!d) { d = { id: 'mine', name: 'Thẻ của mình', lv: 'Mình', small: false, kind: 'vocab', cards: [] }; DECKS.unshift(d); DECK.mine = d; }
   d.cards.forEach(c => delete CARD[c.k]);
   d.cards = (S.custom || []).map(c => ({ f: c.f, r: c.r, m: c.m, x: c.x, k: 'mine:' + c.id, d: 'mine', small: [...c.f].length > 5 }));
   d.cards.forEach(c => CARD[c.k] = c);
@@ -59,9 +88,9 @@ function buildCustom() {
 
 /* ===== STATE + SYNC ===== */
 const LSK = 'jlpt-n2-son-v1';
-const DEF = () => ({ v: 1, upd: 0, srs: {}, log: {}, nw: { d: 0, c: 0 }, set: { newPer: 10, decks: ['hira', 'kata', 'kanji5', 'g5'], target: '', rev: false }, exams: [], week: {}, chk: {}, qs: {}, place: [], custom: [] });
+const DEF = () => ({ v: 1, upd: 0, srs: {}, log: {}, nw: { d: 0, c: 0 }, set: { newPer: 10, decks: ['kj5', 'vb5', 'g5', 'kj4', 'vb4', 'g4', 'jita'], target: '2028-07-02', rev: false, daily: { w: 12, k: 3, g: 2 }, dev: 'auto', typeRev: false, romaji: false }, exams: [], week: {}, chk: {}, qs: {}, place: [], custom: [] });
 let S = DEF();
-function merge(o) { const d = DEF(); return { ...d, ...o, set: { ...d.set, ...(o.set || {}) } }; }
+function merge(o) { const d = DEF(); return migrate({ ...d, ...o, set: { ...d.set, ...(o.set || {}) }, typing: o.typing || [] }); }
 try { const raw = localStorage.getItem(LSK); if (raw) S = merge(JSON.parse(raw)); } catch (e) { }
 let SY = { mode: 'local', msg: 'Đang kiểm tra đồng bộ…', kind: null, writing: false, again: false, t: 0 };
 const IN_CLAUDE = !!(window.claude && window.claude.use);
@@ -138,7 +167,7 @@ const GIST = {
     let upd = 0; try { upd = JSON.parse(content).upd || 0; } catch (e) { return null; }
     return { s: content, upd };
   },
-  push(s) { return this.api('/gists/' + this.cfg.id, { method: 'PATCH', body: JSON.stringify({ files: { [this.FILE]: { content: s } } }) }); },
+  push(s) { let wk = null; try { wk = JSON.stringify(weeklySummary(), null, 1); } catch (e) { } const files = { [this.FILE]: { content: s } }; if (wk) files['jlpt-n2-weekly.json'] = { content: wk }; return this.api('/gists/' + this.cfg.id, { method: 'PATCH', body: JSON.stringify({ files }) }); },
   async sync() {
     if (!this.cfg || !this.cfg.id) return;
     try {
@@ -212,7 +241,7 @@ function buildQueue(onlyDeck) {
   const dn = today();
   const pool = onlyDeck ? DECK[onlyDeck].cards : DECKS.flatMap(d => d.cards);
   const due = pool.filter(c => S.srs[c.k] && S.srs[c.k][0] <= dn).sort((a, b) => S.srs[a.k][0] - S.srs[b.k][0]);
-  const decks = onlyDeck ? [onlyDeck] : S.set.decks;
+  const decks = onlyDeck ? [onlyDeck] : [];
   const fresh = []; let left = newLeft();
   for (const id of decks) { if (!DECK[id]) continue; for (const c of DECK[id].cards) { if (left <= 0) break; if (!S.srs[c.k]) { fresh.push(c); left--; } } }
   // trộn: cứ 3 thẻ ôn chen 1 thẻ mới
@@ -284,21 +313,26 @@ function judge(lv, scores) {
 
 /* ===== ROUTER ===== */
 const ROUTES = [
-  ['today', 'Hôm nay', '今日'], ['review', 'Ôn thẻ', '復習'], ['practice', 'Luyện tập', '練習'],
+  ['today', 'Hôm nay', '今日'], ['learn', 'Học', '学習'], ['review', 'Ôn thẻ', '復習'], ['typing', 'Luyện gõ', '入力'], ['practice', 'Luyện tập', '練習'],
   ['lookup', 'Tra cứu', '辞書'], ['exam', 'Thi thử', '模試'], ['plan', 'Kế hoạch', '計画'],
 ];
+const PHONE_NAV = ['today', 'learn', 'review', 'lookup', 'plan'];
 let route = 'today';
 function go(r) { if (location.hash !== '#' + r) location.hash = r; else { route = r; render(); } }
 function readHash() { const h = location.hash.slice(1); route = ROUTES.some(x => x[0] === h) ? h : 'today'; }
 window.addEventListener('hashchange', () => { readHash(); render(); window.scrollTo(0, 0); });
 
 function renderNav() {
-  $('#nav').innerHTML = ROUTES.map(([id, vi, ja]) => `<a href="#${id}" class="nv${route === id ? ' on' : ''}" ${route === id ? 'aria-current="page"' : ''}><span class="nvj" lang="ja">${ja}</span><span class="nvv">${vi}</span>${id === 'review' && dueCount() + newAvail() > 0 ? `<span class="badge">${dueCount() + newAvail()}</span>` : ''}</a>`).join('');
+  const ph = devMode() === 'phone';
+  $('#nav').innerHTML = ROUTES.filter(r => !ph || PHONE_NAV.includes(r[0]) || r[0] === route).map(([id, vi, ja]) => `<a href="#${id}" class="nv${route === id ? ' on' : ''}" ${route === id ? 'aria-current="page"' : ''}><span class="nvj" lang="ja">${ja}</span><span class="nvv">${vi}</span>${id === 'review' && dueCount() > 0 ? `<span class="badge">${dueCount()}</span>` : ''}</a>`).join('');
 }
 function render() {
   renderNav();
   const v = $('#view');
-  v.innerHTML = ({ today: vToday, review: vReview, practice: vPractice, lookup: vLookup, exam: vExam, plan: vPlan })[route]();
+  document.body.dataset.dev = devMode();
+  v.innerHTML = ({ today: vToday, learn: vLearn, review: vReview, typing: vTyping, practice: vPractice, lookup: vLookup, exam: vExam, plan: vPlan })[route]();
+  if (route === 'learn' && FL) flowAfterRender();
+  if (route === 'typing' && TY) typingAfterRender();
   setSync(SY.mode, SY.msg);
   if (route === 'exam') drawExamTimer();
   if (route === 'lookup') { const i = $('#lkq'); if (i && LK.focus) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); LK.focus = false; } }
@@ -316,80 +350,8 @@ function currentStage() {
   return STAGES.length - 1;
 }
 function stageProg(i) { let t = 0, s = 0; STAGES[i].decks.forEach(id => { const st = deckStats(DECK[id]); t += st.total; s += st.seen; }); return t ? s / t : 0; }
-function vToday() {
-  const now = new Date(), te = targetExam(); const days = te ? dayNum(te.d) - dayNum(now) : 0;
-  const due = dueCount(), nw = newAvail(), wk = isoWeek(), wd = now.getDay();
-  const doneToday = !!(S.week[wk] && S.week[wk][wd]);
-  const l = S.log[dayKey()] || { r: 0, q: 0, c: 0, m: 0 };
-  const bars = []; for (let i = 13; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); const x = S.log[dayKey(d)]; bars.push({ d, n: x ? x.r + x.q : 0 }); }
-  const mx = Math.max(10, ...bars.map(b => b.n));
-  const cs = currentStage();
-  return `
-  <header class="hero">
-    <div class="hero-l">
-      <p class="eyebrow">${WD[now.getDay()]}, ${fmtDate(now)}</p>
-      <h1>Chào Son. <span lang="ja">今日も一歩ずつ。</span></h1>
-      <p class="muted">Giai đoạn hiện tại: <b>${STAGES[cs].n}</b> · ${esc(STAGES[cs].goal)}</p>
-    </div>
-    ${te ? `<div class="count" title="Kỳ thi mục tiêu">
-      <span class="count-l" lang="ja">あと</span><span class="count-n">${days}</span><span class="count-l" lang="ja">日</span>
-      <span class="count-d">đến ${fmtDate(te.d)}${te.official ? '' : ' (dự kiến)'}</span>
-    </div>` : ''}
-  </header>
-
-  ${(S.place || []).length ? '' : `<div class="panel ptnudge"><div><b>Chưa biết mình đang ở đâu?</b> <span class="muted">Làm bài kiểm tra trình độ 10–20 phút để app chọn giai đoạn và bộ thẻ phù hợp.</span></div><button class="btn pri" data-a="ptStart">Kiểm tra trình độ</button></div>`}
-  <section class="grid2">
-    <div class="panel">
-      <div class="ph"><h2>Ôn thẻ hôm nay</h2><span class="tag">FSRS · nhớ ${Math.round((S.set.ret || 0.9) * 100)}%</span></div>
-      <div class="kpis">
-        <div><b class="num">${due}</b><span>đến hạn</span></div>
-        <div><b class="num">${nw}</b><span>thẻ mới</span></div>
-        <div><b class="num">${l.r}</b><span>đã ôn hôm nay</span></div>
-      </div>
-      <button class="btn pri wide" data-a="startReview" ${due + nw ? '' : 'disabled'}>${due + nw ? `Ôn ${due + nw} thẻ` : 'Hôm nay đã xong thẻ'}</button>
-      <p class="hint">Thẻ mới lấy từ: ${S.set.decks.map(id => DECK[id] ? DECK[id].name : '').filter(Boolean).join(', ')} · ${S.set.newPer} thẻ/ngày. Đổi ở mục Kế hoạch.</p>
-    </div>
-
-    <div class="panel">
-      <div class="ph"><h2>Lịch hôm nay</h2><span class="tag">${WEEK[wd][0]}</span></div>
-      <label class="check big"><input type="checkbox" id="wk-today" data-a="weekTick" data-d="${wd}" ${doneToday ? 'checked' : ''}><span>15′ ôn thẻ + ${esc(WEEK[wd][1])}</span></label>
-      <div class="sess" id="sess">${sessHTML()}</div>
-    </div>
-  </section>
-
-  <section class="grid2">
-    <div class="panel">
-      <div class="ph"><h2>Chuỗi ngày học</h2><span class="streak"><b class="num">${streak()}</b> ngày</span></div>
-      <div class="bars" role="img" aria-label="Số thẻ và câu hỏi đã làm 14 ngày qua">
-        ${bars.map((b, i) => `<div class="bar${i === 13 ? ' now' : ''}" title="${fmtDate(b.d)}: ${b.n}"><i style="height:${Math.round(b.n / mx * 100)}%"></i><span>${b.d.getDate()}</span></div>`).join('')}
-      </div>
-      <p class="hint">Mỗi cột: số thẻ đã ôn + câu luyện tập trong ngày.</p>
-    </div>
-    <div class="panel">
-      <div class="ph"><h2>Lộ trình 0 → N2</h2><a class="lnk" href="#plan">Chi tiết</a></div>
-      <ol class="stages">
-        ${STAGES.map((s, i) => { const p = stageProg(i); return `<li class="${i === cs ? 'cur' : p >= 0.8 ? 'done' : ''}"><span class="sn">${s.n}</span><span class="sbar"><i style="width:${Math.round(p * 100)}%"></i></span><span class="sp num">${Math.round(p * 100)}%</span></li>`; }).join('')}
-      </ol>
-      <p class="hint">% = số thẻ đã học trong các bộ của giai đoạn đó.</p>
-    </div>
-  </section>`;
-}
-
-/* buổi học 60' */
-let SESS = null;
-function sessHTML() {
-  if (!SESS) return `<div class="ph sm"><h3>Buổi học chuẩn 60′</h3></div>
-    <ol class="blocks">${SESSION.map(b => `<li><b>${b[1]}′</b> ${esc(b[0])}<small>${esc(b[2])}</small></li>`).join('')}</ol>
-    <button class="btn" data-a="sessStart">Bắt đầu buổi học</button>`;
-  const el = (Date.now() - SESS.t0) / 1000; let acc = 0, idx = SESSION.length, rem = 0;
-  for (let i = 0; i < SESSION.length; i++) { acc += SESSION[i][1] * 60; if (el < acc) { idx = i; rem = acc - el; break; } }
-  if (idx >= SESSION.length) return `<p class="done-msg">Xong buổi học 60′. <span lang="ja">お疲れさまでした。</span></p><button class="btn" data-a="sessStop">Đóng</button>`;
-  return `<div class="ph sm"><h3>Đang học: ${esc(SESSION[idx][0])}</h3><span class="num timer-s">${pad(Math.floor(rem / 60))}:${pad(Math.floor(rem % 60))}</span></div>
-    <ol class="blocks">${SESSION.map((b, i) => `<li class="${i < idx ? 'past' : i === idx ? 'cur' : ''}"><b>${b[1]}′</b> ${esc(b[0])}<small>${esc(b[2])}</small></li>`).join('')}</ol>
-    <div class="row">${idx === 0 ? '<button class="btn pri" data-a="startReview">Mở Ôn thẻ</button>' : ''}<button class="btn" data-a="sessNext">Chuyển phần tiếp</button><button class="btn ghost" data-a="sessStop">Dừng</button></div>`;
-}
+/* vToday, kế hoạch 2 giờ: xem flow.js */
 setInterval(() => {
-  if (SESS) { const el = $('#sess'); if (el) el.innerHTML = sessHTML(); const elapsed = (Date.now() - SESS.t0) / 1000; let acc = 0, idx = 4; for (let i = 0; i < 4; i++) { acc += SESSION[i][1] * 60; if (elapsed < acc) { idx = i; break; } } if (SESS.idx !== idx) { if (SESS.idx != null) beep(); SESS.idx = idx; if (idx >= 4) { logAdd('m', 60); save(); } } }
   if (EX.run) drawExamTimer();
 }, 1000);
 function beep() { try { const a = beep.ctx || (beep.ctx = new (window.AudioContext || window.webkitAudioContext)()); const o = a.createOscillator(), g = a.createGain(); o.frequency.value = 880; g.gain.value = 0.08; o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + 0.35); } catch (e) { } if (navigator.vibrate) try { navigator.vibrate(200); } catch (e) { } }
@@ -445,19 +407,20 @@ function vReview() {
   const c = RV.q[RV.i], st = S.srs[c.k], isNew = !st;
   const prev = [1, 2, 3, 4].map(g => sched(st, g)).map(r => r.again ? '<10 phút' : ivlLabel(r.st[1]));
   const left = RV.q.length - RV.i;
+  const tsp = S.set.typeRev ? revTypeSpec(c) : null, ty = RV.typed, sug = ty ? (ty.ok ? 3 : 1) : 0;
   return `<div class="rv-top"><button class="btn ghost sm" data-a="reviewClose">Thoát</button><span class="muted">${esc(DECK[c.d].name)}${isNew ? ' · <b class="new">mới</b>' : ''}</span><span class="num muted">còn ${left}</span></div>
   <div class="rv-prog"><i style="width:${Math.round(RV.i / RV.q.length * 100)}%"></i></div>
-  <div class="flash${RV.flip ? ' flipped' : ''}" data-a="${RV.flip ? '' : 'flip'}">
+  <div class="flash${RV.flip ? ' flipped' : ''}" data-a="${RV.flip || tsp ? '' : 'flip'}">
     ${cardFront(c)}
-    ${RV.flip ? `<div class="cb">${cardBack(c)}</div>` : '<p class="tap">Chạm hoặc nhấn Space để lật</p>'}
+    ${RV.flip ? `${ty ? `<div class="expl ${ty.ok ? 'good' : 'bad'}"><b>${ty.ok ? 'Gõ đúng.' : 'Chưa đúng.'}</b> Bạn gõ: <span lang="ja">${esc(ty.v || '—')}</span></div>` : ''}<div class="cb">${cardBack(c)}</div>` : tsp ? `<p class="qsub">${tsp.q}</p>` : '<p class="tap">Chạm hoặc nhấn Space để lật</p>'}
   </div>
   <div class="rv-act">
     ${RV.flip ? `<div class="grades">
-      <button class="g g1" data-a="grade" data-g="1"><b>Lại</b><span>${prev[0]}</span></button>
+      <button class="g g1${sug === 1 ? ' sug' : ''}" data-a="grade" data-g="1"><b>Lại</b><span>${prev[0]}</span></button>
       <button class="g g2" data-a="grade" data-g="2"><b>Khó</b><span>${prev[1]}</span></button>
-      <button class="g g3" data-a="grade" data-g="3"><b>Được</b><span>${prev[2]}</span></button>
+      <button class="g g3${sug === 3 ? ' sug' : ''}" data-a="grade" data-g="3"><b>Được</b><span>${prev[2]}</span></button>
       <button class="g g4" data-a="grade" data-g="4"><b>Dễ</b><span>${prev[3]}</span></button>
-    </div>` : `<button class="btn pri wide" data-a="flip">Lật thẻ</button>`}
+    </div>` : tsp ? `<div class="typebox"><input id="rv-in" class="jpin" lang="ja" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="gõ bằng bàn phím tiếng Nhật"><div class="row"><button class="btn pri" data-a="rvCheck">Kiểm tra</button><button class="btn ghost" data-a="flip">Lật luôn</button></div></div>` : `<button class="btn pri wide" data-a="flip">Lật thẻ</button>`}
     <button class="btn ghost sm" data-a="speakCard">Nghe phát âm</button>
   </div>
   <p class="hint center">Phím tắt: Space lật · 1 Lại · 2 Khó · 3 Được · 4 Dễ</p>`;
@@ -469,8 +432,8 @@ function grade(g) {
   if (wasNew) { const d = today(); if (S.nw.d !== d) S.nw = { d, c: 0 }; S.nw.c++; }
   logAdd('r'); RV.n++;
   if (r.again) { RV.again++; RV.q.splice(Math.min(RV.q.length, RV.i + 5), 0, c); }
-  RV.i++; RV.flip = false;
-  save(); render();
+  RV.i++; RV.flip = false; RV.typed = null;
+  save(); render(); const ri = $('#rv-in'); if (ri) ri.focus();
 }
 
 /* ===== PRACTICE ===== */
@@ -561,7 +524,8 @@ function genQuiz(mode) {
 function yomiPool(lv) {
   const out = []; const kj = /[\u4e00-\u9fff]/;
   const fromEx = rows => rows.forEach(k => k[5].split(' · ').forEach(p => { const [w, r] = p.split(' '); if (w && r && kj.test(w)) out.push([w, r]); }));
-  if (lv === 'N5') fromEx(KANJI5);
+  if (HAS_BULK) { const n = +lv.slice(1); shuffle(VB.filter(v => v[4] === n && v[1] && kj.test(v[0]))).slice(0, 400).forEach(v => out.push([v[0], v[1]])); }
+  else if (lv === 'N5') fromEx(KANJI5);
   else if (lv === 'N4') fromEx(KANJI4);
   else { VOCAB.filter(v => v[0] === lv && kj.test(v[2])).forEach(v => out.push([v[2], v[3]])); if (lv === 'N3') SENMON.forEach(v => out.push([v[0], v[1]])); if (lv === 'N2') NISE.forEach(v => out.push([v[0], v[1]])); }
   return out.filter((x, i) => out.findIndex(y => y[0] === x[0]) === i);
@@ -608,7 +572,7 @@ function vPractice() {
   if (typeof PT !== 'undefined' && PT) return vPlacement();
   if (SH) return vShadow();
   if (QZ) return vQuiz();
-  const lvSel = `<div class="seg" role="group" aria-label="Cấp">${['N5', 'N4', 'N3', 'N2'].map(l => `<button class="${PR.lv === l ? 'on' : ''}" data-a="prLv" data-v="${l}">${l}</button>`).join('')}</div>`;
+  const lvSel = `<div class="seg" role="group" aria-label="Cấp">${['N5', 'N4', 'N3', 'N2', 'N1'].map(l => `<button class="${PR.lv === l ? 'on' : ''}" data-a="prLv" data-v="${l}">${l}</button>`).join('')}</div>`;
   return `<h1 class="pt">Luyện tập <span lang="ja">練習</span></h1>
   ${placementCard()}
   <h2 class="sh">Luyện theo dạng</h2>
@@ -657,7 +621,7 @@ function lkBody() {
     case 'grammar': {
       const rows = GRAMMAR.filter(g => (LK.lv === 'all' || g.lv === LK.lv) && (LK.gr === 'all' || g.gr === LK.gr) && match(g.p, g.m, g.x, g.lv));
       return `<div class="row wrap">
-        <div class="seg">${['all', 'N5', 'N4', 'N3', 'N2'].map(l => `<button class="${LK.lv === l ? 'on' : ''}" data-a="lkLv" data-v="${l}">${l === 'all' ? 'Tất cả' : l}</button>`).join('')}</div>
+        <div class="seg">${['all', 'N5', 'N4', 'N3', 'N2', 'N1'].map(l => `<button class="${LK.lv === l ? 'on' : ''}" data-a="lkLv" data-v="${l}">${l === 'all' ? 'Tất cả' : l}</button>`).join('')}</div>
         ${LK.lv === 'N2' ? `<select id="lk-gr" data-a="lkGr"><option value="all">Mọi nhóm N2</option>${Object.entries(G2_GROUPS).map(([k, v]) => `<option value="${k}" ${LK.gr === k ? 'selected' : ''}>${k}. ${v}</option>`).join('')}</select>` : ''}
         <span class="muted num">${rows.length} mẫu</span></div>
       <div class="glist">${rows.map(g => `<article class="gi">
@@ -678,12 +642,12 @@ function lkBody() {
       <h2 class="sh">Bạn giả: từ Hán nghĩa khác tiếng Việt</h2>${table(['Từ', 'Đọc', 'Hán-Việt', 'Nghĩa tiếng Nhật'], NISE, [0, 1])}
       <h2 class="sh">Từ ngành môi trường / xử lý nước</h2>${table(['Từ', 'Đọc', 'Hán-Việt', 'Nghĩa'], SENMON, [0, 1])}`;
     case 'kanji': {
-      const ks = KANJI5.filter(k => match(...k)); const k4 = KANJI4.filter(k => match(...k));
+      const kl = LK.klv || 'N5', kdeck = DECK['kj' + kl.slice(1)] || DECK.kanji5;
+      const ks = kdeck ? kdeck.cards.filter(c => match(c.f, c.hv, c.m, c.en || '', c.r, c.x)) : [];
       const rs = RADICALS.filter(r => match(...r));
-      return `<h2 class="sh">Kanji N5 <span class="muted num">${ks.length}</span></h2>
-      <div class="kgrid">${ks.map(([c, hv, on, kun, m, ex]) => `<button class="kc" data-a="say" data-v="${esc(ex.split(' ')[0])}" title="Nghe từ ví dụ"><span class="kch" lang="ja">${c}</span><span class="khv">${hv}</span><span class="km">${esc(m)}</span><span class="kr" lang="ja">${esc(on)} · ${esc(kun)}</span><span class="kx" lang="ja">${esc(ex)}</span></button>`).join('')}</div>
-      <h2 class="sh">Kanji N4 <span class="muted num">${k4.length}</span></h2>
-      <div class="kgrid">${k4.map(([c, hv, on, kun, m, ex]) => `<button class="kc" data-a="say" data-v="${esc(ex.split(' ')[0])}" title="Nghe từ ví dụ"><span class="kch" lang="ja">${c}</span><span class="khv">${hv}</span><span class="km">${esc(m)}</span><span class="kr" lang="ja">${esc(on)} · ${esc(kun)}</span><span class="kx" lang="ja">${esc(ex)}</span></button>`).join('')}</div>
+      return `<div class="seg">${['N5', 'N4', 'N3', 'N2', 'N1'].map(l => `<button class="${kl === l ? 'on' : ''}" data-a="lkKlv" data-v="${l}">${l}</button>`).join('')}</div>
+      <h2 class="sh">Kanji ${kl} <span class="muted num">${ks.length}${ks.length > 300 ? ' · hiện 300 chữ đầu, gõ tìm để lọc' : ''}</span></h2>
+      <div class="kgrid">${ks.slice(0, 300).map(c => `<button class="kc" data-a="say" data-v="${esc(c.say || c.f)}" title="Nghe từ ví dụ"><span class="kch" lang="ja">${c.f}</span><span class="khv">${esc(c.hv || '')}</span><span class="km">${esc(c.m)}</span><span class="kr" lang="ja">${esc(c.r)}</span><span class="kx" lang="ja">${esc(c.x || '')}</span></button>`).join('')}</div>
       <h2 class="sh">Bộ thủ quan trọng <span class="muted num">${rs.length}</span></h2>${table(['Bộ', 'Tên', 'Nghĩa gợi ý', 'Ví dụ'], rs, [0, 3])}
       <h2 class="sh">Chữ hay nhầm</h2><p class="pairs" lang="ja">待/持/特 · 未/末 · 土/士 · 責/積/績 · 険/検/験 · 復/複/腹 · 微/徴 · 析/折 · 侍/待</p>`;
     }
@@ -717,7 +681,7 @@ function lkBody() {
 に (bị động, cho/nhận)|người thực hiện|先生にほめられた。/ 友達にもらった。
 で (nguyên nhân, phạm vi)|do, trong|風邪で休んだ。/ クラスで一番
 しか～ない / だけ|しか + phủ định nhấn "chỉ có (ít)"|100円しかない。/ 100円だけある。`).filter(r => match(...r)), [2]);
-    case 'vocab': return `${Object.entries(VOCAB_TOPICS).map(([id, name]) => { const rows = VOCAB.filter(v => v[1] === id && match(...v)).map(v => [v[2], v[3], v[4], v[5], v[0], v[6]]); return rows.length ? `<h2 class="sh">${esc(name)} <span class="muted num">${rows.length}</span></h2>${table(['Từ', 'Đọc', 'Hán-Việt', 'Nghĩa', 'Cấp', 'Ví dụ'], rows, [0, 1, 5])}` : ''; }).join('')}
+    case 'vocab': return `${vocabJLPT()}<h2 class="sh">Từ vựng theo chủ đề (tự soạn, tiếng Việt)</h2>${Object.entries(VOCAB_TOPICS).map(([id, name]) => { const rows = VOCAB.filter(v => v[1] === id && match(...v)).map(v => [v[2], v[3], v[4], v[5], v[0], v[6]]); return rows.length ? `<h2 class="sh">${esc(name)} <span class="muted num">${rows.length}</span></h2>${table(['Từ', 'Đọc', 'Hán-Việt', 'Nghĩa', 'Cấp', 'Ví dụ'], rows, [0, 1, 5])}` : ''; }).join('')}
       <h2 class="sh">Tự / tha động từ</h2><p class="hint">Cặp -aru / -eru: -aru là tự. Cặp có -su: -su là tha.</p>${table(['Tự (が)', 'Tha (を)', 'Nghĩa'], JITA.filter(r => match(...r)), [0, 1])}
       <h2 class="sh">Phó từ N2</h2>${table(['Từ', 'Nghĩa', 'Ví dụ'], FUKUSHI.filter(r => match(...r)), [0, 2])}
       <h2 class="sh">Động từ ghép (Vます + …)</h2>${table(['Hậu tố', 'Nghĩa', 'Ví dụ'], FUKUGO.filter(r => match(...r)), [0, 2])}
@@ -726,6 +690,15 @@ function lkBody() {
     case 'kaiwa': return `${table(['Văn nói', 'Gốc', 'Ví dụ'], KAIWA.filter(r => match(...r)), [0, 1, 2])}<p class="hint">Bắt buộc cho phần nghe 即時応答 (問題4).</p>`;
     case 'tips': return `<div class="tips">${TIPS.map(([t, d]) => `<div class="tip"><h3 lang="ja">${esc(t)}</h3><p>${d}</p></div>`).join('')}</div>`;
   }
+}
+function vocabJLPT() {
+  if (!HAS_BULK) return '';
+  const vl = LK.vlv || 'N5', d = DECK['vb' + vl.slice(1)];
+  const rows = d.cards.filter(c => match(c.f, c.r, c.m, c.en || '', c.hv || ''));
+  return `<div class="seg">${['N5', 'N4', 'N3', 'N2', 'N1'].map(l => `<button class="${vl === l ? 'on' : ''}" data-a="lkVlv" data-v="${l}">${l}</button>`).join('')}</div>
+  <h2 class="sh">Từ vựng JLPT ${vl} <span class="muted num">${rows.length}${rows.length > 200 ? ' · hiện 200 từ đầu, gõ tìm để lọc' : ''}</span></h2>
+  ${table(['Từ', 'Đọc', 'Hán-Việt', 'Nghĩa', 'Đã học'], rows.slice(0, 200).map(c => [c.f, c.r || '', c.hv || '', c.m, S.srs[c.k] ? '✓' : '']), [0, 1])}
+  <p class="hint">Nghĩa tiếng Anh lấy từ danh sách JLPT mở; từ nào đã có bản tiếng Việt tự soạn thì hiện tiếng Việt. Hán-Việt ghép tự động từng chữ, có thể lệch với từ ít gặp.</p>`;
 }
 function table(head, rows, jpCols = []) {
   if (!rows.length) return '<p class="muted">Không có kết quả.</p>';
@@ -846,9 +819,11 @@ function vPlan() {
     <div class="panel">
       <div class="ph"><h2>Mốc thời gian</h2></div>
       <ol class="tl">${MILESTONES.map(m => `<li><b class="num">${m[0]}</b><span>${esc(m[1])}</span></li>`).join('')}</ol>
-      <p class="hint">Ước tính 1.200–1.800 giờ từ con số 0 đến N2 với nền Hán-Việt và sống ở Nhật.</p>
+      <p class="hint">14 giờ/tuần × 85 tuần ≈ 1.190 giờ đến kỳ 2/7/2028. Chỉ thi N2; chưa đỗ thì thi lại kỳ tháng 12 đến khi đỗ.</p>
     </div>
   </section>
+
+  ${weeklyPanel()}
 
   <section class="panel">
     <div class="ph"><h2>Các giai đoạn</h2></div>
@@ -886,10 +861,8 @@ function vPlan() {
     <div class="ph"><h2>Cài đặt và đồng bộ</h2></div>
     <div class="syncline"><span class="dot syncdot"></span><span class="synctext">${esc(SY.msg)}</span></div>
     ${IN_CLAUDE ? '' : gistUI()}
-    <label class="fld" for="set-new">Thẻ mới mỗi ngày
-      <select id="set-new" data-a="setNew">${[5, 10, 15, 20, 30, 50].map(n => `<option ${S.set.newPer === n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
-    <p class="hint">Gợi ý: 10 thẻ/ngày giai đoạn N5–N4, 15–20 thẻ giai đoạn N3–N2. Học kana có thể để 30.</p>
-    <fieldset class="fs"><legend>Bộ thẻ lấy thẻ mới</legend>
+    ${studySettings()}
+    <fieldset class="fs"><legend>Bộ thẻ lấy mục mới (luồng Học)</legend>
       <div class="deckpick">${DECKS.map(d => `<label class="check"><input type="checkbox" id="dk-${d.id}" data-a="deckTog" data-v="${d.id}" ${S.set.decks.includes(d.id) ? 'checked' : ''}><span><span class="lv">${d.lv}</span> ${esc(d.name)} <small class="muted num">${d.cards.length}</small></span></label>`).join('')}</div>
     </fieldset>
     <label class="fld" for="set-ret">Mức nhớ mục tiêu (FSRS)
@@ -1011,9 +984,6 @@ const ACT = {
   grade(t) { grade(+t.dataset.g); },
   speakCard() { const c = RV && RV.q[RV.i]; if (c) speak(c.say || c.f.replace(/^自 /, '').split(/[ (]/)[0]); },
   toggleRev(t) { S.set.rev = t.checked; save(); },
-  sessStart() { SESS = { t0: Date.now(), idx: null }; beep(); $('#sess').innerHTML = sessHTML(); },
-  sessNext() { if (!SESS) return; const el = (Date.now() - SESS.t0) / 1000; let acc = 0; for (const b of SESSION) { acc += b[1] * 60; if (el < acc) { SESS.t0 -= (acc - el) * 1000; break; } } $('#sess').innerHTML = sessHTML(); },
-  sessStop() { SESS = null; $('#sess').innerHTML = sessHTML(); },
   weekTick(t) { const wk = isoWeek(); S.week[wk] = S.week[wk] || {}; S.week[wk][t.dataset.d] = t.checked; if (t.checked) logAdd('m', 1); save(); },
   chk(t) { S.chk[t.dataset.i] = t.checked; save(); render(); },
   prLv(t) { PR.lv = t.dataset.v; render(); },
@@ -1032,6 +1002,8 @@ const ACT = {
   lkSec(t) { LK.sec = t.dataset.v; LK.q = ''; render(); },
   lkLv(t) { LK.lv = t.dataset.v; LK.gr = 'all'; $('#lkbody').innerHTML = lkBody(); render(); },
   lkGr(t) { LK.gr = t.value; $('#lkbody').innerHTML = lkBody(); },
+  lkKlv(t) { LK.klv = t.dataset.v; $('#lkbody').innerHTML = lkBody(); render(); },
+  lkVlv(t) { LK.vlv = t.dataset.v; $('#lkbody').innerHTML = lkBody(); render(); },
   lkVerb(t) { LK.verb = +t.value; $('#lkbody').innerHTML = lkBody(); },
   say(t) { speak(t.dataset.v); },
   askG(t) { copyText(`Giải thích lại mẫu ${t.dataset.v} (${t.dataset.l}) theo file JLPT_N2_tong_hop.md, phân biệt với các mẫu dễ nhầm, cho thêm 5 câu ví dụ về cuộc sống ở Nhật và phòng thí nghiệm xử lý nước, rồi cho mình 3 câu luyện kiểu 問題7.`); },
