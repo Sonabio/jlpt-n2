@@ -111,7 +111,8 @@ function lpView() {
     ${LP.tip ? `<p class="tipbox">${esc(MD[md].tip)}</p>` : ''}
     ${playerHTML()}
     ${showQ && it.q ? `<p class="lqtext" lang="ja">${esc(it.q)}</p>` : ''}
-    ${!itemOpts(it, 0) ? '<p class="hint">Bộ này không có chữ lựa chọn (in trong giáo trình). Nghe rồi chọn số.</p>' : !vis ? '<p class="hint">Dạng này lựa chọn được đọc trong bài nghe. Nghe rồi chọn số; muốn dễ hơn thì bật hiện chữ.</p>' : ''}
+    ${it.img ? `<img class="optimg" src="${it.img}" alt="Lựa chọn dạng hình">` : ''}
+    ${!itemOpts(it, 0) ? (it.img ? '<p class="hint">Lựa chọn dạng hình: nhìn hình rồi chọn số.</p>' : '<p class="hint">Lựa chọn chỉ được đọc trong bài nghe (giáo trình không in chữ). Nghe rồi chọn số.</p>') : !vis ? '<p class="hint">Dạng này lựa chọn được đọc trong bài nghe. Nghe rồi chọn số; muốn dễ hơn thì bật hiện chữ.</p>' : ''}
     ${qs}
     ${LP.shown ? lpReveal(it) : `<div class="row"><button class="btn ghost sm" data-a="lpShowOpts">${LP.showOpts ? 'Ẩn chữ' : 'Hiện chữ'}</button><button class="btn ghost sm" data-a="lpSkip">Bỏ qua câu này</button></div>`}
   </section>`;
@@ -183,7 +184,7 @@ VIEWS.read = () => {
   ${wd.length ? `<section class="panel ptnudge"><span><b>${wd.length} câu đọc sai</b> đến hạn làm lại.</span><button class="btn pri" data-a="rpWeak">Làm lại câu sai</button></section>` : ''}
   <section class="panel"><div class="ph"><h2>Theo dạng</h2></div>
     <div class="mdgrid">${types.map(t => { const ps = Object.values(PASS).filter(p => p.type === t), st = typeStats('R' + t); return ps.length ? `<div class="mdc"><b lang="ja">${t}</b><span class="muted">${RT[t].vi} · ${ps.length} bài · ~${RT[t].min}′/bài</span>${st.done ? `<span class="num">${st.lastPct}% đúng · ${st.avgPass ? Math.round(st.avgPass / 60 * 10) / 10 + '′/bài' : ''}</span>` : '<span class="muted">chưa làm</span>'}<button class="btn sm" data-a="rpType" data-v="${t}">3 bài</button></div>` : ''; }).join('')}</div></section>
-  <section class="panel"><div class="ph"><h2>Theo bài (Chặng 2)</h2></div><div class="sets">${sets.map(setCard).join('')}</div></section>`;
+  <section class="panel"><div class="ph"><h2>Theo bài</h2></div><div class="sets">${sets.map(setCard).join('')}</div></section>`;
 };
 function rpView() {
   const p = PASS[RP.pids[RP.i]], items = passItems(p.pid), el = (Date.now() - RP.t0) / 1000, tgt = RT[p.type].min * 60;

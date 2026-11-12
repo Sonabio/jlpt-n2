@@ -11,7 +11,7 @@ function indexContent() {
     s.items.forEach((it, i) => { ITEM[it.id] = { ...it, set: s.id, kind: s.kind, i, type: s.kind === 'L' ? 'L' + s.md : 'R' + PASS[it.pid].type }; });
   });
 }
-function setTitle(s) { return s.kind === 'L' ? (s.src === 'f-' ? `Nền tảng · Chương ${s.unit}` : `Chặng 2 · Bài ${s.unit}`) : `Chặng 2 · Bài ${s.unit}`; }
+function setTitle(s) { return s.src === 'f-' ? `Nền tảng · Chương ${s.unit}` : `Chặng 2 · Bài ${s.unit}`; }
 function typeName(t) { return t[0] === 'L' ? `問題${t[1]} ${MD[t[1]].ja}` : t[0] === 'K' ? `問題${t[1]} ${EXAM_PARTS[t[1] - 1][1]}` : `${t.slice(1)}`; }
 function typeVi(t) { return t[0] === 'L' ? `Nghe ${t[1]} · ${MD[t[1]].vi}` : t[0] === 'K' ? `${+t[1] <= 6 ? 'Từ vựng' : 'Ngữ pháp'} · ${EXAM_PARTS[t[1] - 1][2]}` : `Đọc · ${RT[t.slice(1)].vi}`; }
 function loadContentLocal() { try { const r = localStorage.getItem(CK); if (r) { C = JSON.parse(r); indexContent(); } } catch (e) { C = null; } }

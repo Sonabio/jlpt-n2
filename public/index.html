@@ -400,6 +400,7 @@ code.big { display: inline-block; font-size: 1.1rem; letter-spacing: .06em; padd
 .pimgs { display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 220px); overflow-y: auto; }
 .pimgs img { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
 @media (prefers-color-scheme: dark) { .pimgs img { filter: invert(.88) hue-rotate(180deg); } }
+.optimg { max-width: 100%; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
 .phrbox { display: flex; gap: 8px; flex-wrap: wrap; }
 .phrbox input { flex: 1 1 200px; }
 .whyrow { display: flex; flex-direction: column; gap: 6px; }
@@ -828,7 +829,7 @@ function indexContent() {
     s.items.forEach((it, i) => { ITEM[it.id] = { ...it, set: s.id, kind: s.kind, i, type: s.kind === 'L' ? 'L' + s.md : 'R' + PASS[it.pid].type }; });
   });
 }
-function setTitle(s) { return s.kind === 'L' ? (s.src === 'f-' ? `Nền tảng · Chương ${s.unit}` : `Chặng 2 · Bài ${s.unit}`) : `Chặng 2 · Bài ${s.unit}`; }
+function setTitle(s) { return s.src === 'f-' ? `Nền tảng · Chương ${s.unit}` : `Chặng 2 · Bài ${s.unit}`; }
 function typeName(t) { return t[0] === 'L' ? `問題${t[1]} ${MD[t[1]].ja}` : t[0] === 'K' ? `問題${t[1]} ${EXAM_PARTS[t[1] - 1][1]}` : `${t.slice(1)}`; }
 function typeVi(t) { return t[0] === 'L' ? `Nghe ${t[1]} · ${MD[t[1]].vi}` : t[0] === 'K' ? `${+t[1] <= 6 ? 'Từ vựng' : 'Ngữ pháp'} · ${EXAM_PARTS[t[1] - 1][2]}` : `Đọc · ${RT[t.slice(1)].vi}`; }
 function loadContentLocal() { try { const r = localStorage.getItem(CK); if (r) { C = JSON.parse(r); indexContent(); } } catch (e) { C = null; } }
@@ -1071,7 +1072,8 @@ function lpView() {
     ${LP.tip ? `<p class="tipbox">${esc(MD[md].tip)}</p>` : ''}
     ${playerHTML()}
     ${showQ && it.q ? `<p class="lqtext" lang="ja">${esc(it.q)}</p>` : ''}
-    ${!itemOpts(it, 0) ? '<p class="hint">Bộ này không có chữ lựa chọn (in trong giáo trình). Nghe rồi chọn số.</p>' : !vis ? '<p class="hint">Dạng này lựa chọn được đọc trong bài nghe. Nghe rồi chọn số; muốn dễ hơn thì bật hiện chữ.</p>' : ''}
+    ${it.img ? `<img class="optimg" src="${it.img}" alt="Lựa chọn dạng hình">` : ''}
+    ${!itemOpts(it, 0) ? (it.img ? '<p class="hint">Lựa chọn dạng hình: nhìn hình rồi chọn số.</p>' : '<p class="hint">Lựa chọn chỉ được đọc trong bài nghe (giáo trình không in chữ). Nghe rồi chọn số.</p>') : !vis ? '<p class="hint">Dạng này lựa chọn được đọc trong bài nghe. Nghe rồi chọn số; muốn dễ hơn thì bật hiện chữ.</p>' : ''}
     ${qs}
     ${LP.shown ? lpReveal(it) : `<div class="row"><button class="btn ghost sm" data-a="lpShowOpts">${LP.showOpts ? 'Ẩn chữ' : 'Hiện chữ'}</button><button class="btn ghost sm" data-a="lpSkip">Bỏ qua câu này</button></div>`}
   </section>`;
@@ -1143,7 +1145,7 @@ VIEWS.read = () => {
   ${wd.length ? `<section class="panel ptnudge"><span><b>${wd.length} câu đọc sai</b> đến hạn làm lại.</span><button class="btn pri" data-a="rpWeak">Làm lại câu sai</button></section>` : ''}
   <section class="panel"><div class="ph"><h2>Theo dạng</h2></div>
     <div class="mdgrid">${types.map(t => { const ps = Object.values(PASS).filter(p => p.type === t), st = typeStats('R' + t); return ps.length ? `<div class="mdc"><b lang="ja">${t}</b><span class="muted">${RT[t].vi} · ${ps.length} bài · ~${RT[t].min}′/bài</span>${st.done ? `<span class="num">${st.lastPct}% đúng · ${st.avgPass ? Math.round(st.avgPass / 60 * 10) / 10 + '′/bài' : ''}</span>` : '<span class="muted">chưa làm</span>'}<button class="btn sm" data-a="rpType" data-v="${t}">3 bài</button></div>` : ''; }).join('')}</div></section>
-  <section class="panel"><div class="ph"><h2>Theo bài (Chặng 2)</h2></div><div class="sets">${sets.map(setCard).join('')}</div></section>`;
+  <section class="panel"><div class="ph"><h2>Theo bài</h2></div><div class="sets">${sets.map(setCard).join('')}</div></section>`;
 };
 function rpView() {
   const p = PASS[RP.pids[RP.i]], items = passItems(p.pid), el = (Date.now() - RP.t0) / 1000, tgt = RT[p.type].min * 60;
