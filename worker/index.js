@@ -128,21 +128,26 @@ async function api(req, env, url) {
   if (p === '/api/space/rotate' && m === 'POST') return rotate(db, a.id, a.dev);
 
   /* Nội dung bài tập (tài liệu khóa học riêng): chỉ máy đã ghép mới đọc/ghi được */
-  if (p === '/api/content' && m === 'GET') {
-    const since = Number(url.searchParams.get('since')) || 0;
-    const row = await db.prepare("SELECT upd FROM content WHERE id = 'main'").first();
-    if (!row) return json({ data: null });
-    if (since && row.upd <= since) return json({ data: null, upd: row.upd, same: true });
-    const full = await db.prepare("SELECT data, upd FROM content WHERE id = 'main'").first();
-    return json({ data: full.data, upd: full.upd });
-  }
-  if (p === '/api/content' && m === 'PUT') {
-    const b = await body(req);
-    if (typeof b.data !== 'string' || b.data.length > MAX_CONTENT) return err('too_large', 'Nội dung quá lớn.', 413);
-    try { const o = JSON.parse(b.data); if (!Array.isArray(o.sets)) throw 0; } catch (e) { return err('bad', 'Nội dung không đúng định dạng.', 400); }
-    const now = Date.now();
-    await db.prepare("INSERT INTO content (id, data, upd) VALUES ('main', ?, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data, upd = excluded.upd").bind(b.data, now).run();
-    return json({ ok: true, upd: now });
+  if (p === '/api/content') {
+    const slot = url.searchParams.get('slot') || 'main';
+    if (!/^[a-z0-9]{1,12}$/.test(slot)) return err('bad', 'Slot không hợp lệ.', 400);
+    const cid = slot === 'main' ? 'main' : 'lv-' + slot;   // 'main' = N2; slot khác = nội dung cấp khác (N3–N5)
+    if (m === 'GET') {
+      const since = Number(url.searchParams.get('since')) || 0;
+      const row = await db.prepare('SELECT upd FROM content WHERE id = ?').bind(cid).first();
+      if (!row) return json({ data: null });
+      if (since && row.upd <= since) return json({ data: null, upd: row.upd, same: true });
+      const full = await db.prepare('SELECT data, upd FROM content WHERE id = ?').bind(cid).first();
+      return json({ data: full.data, upd: full.upd });
+    }
+    if (m === 'PUT') {
+      const b = await body(req);
+      if (typeof b.data !== 'string' || b.data.length > MAX_CONTENT) return err('too_large', 'Nội dung quá lớn.', 413);
+      try { const o = JSON.parse(b.data); if (!Array.isArray(o.sets)) throw 0; } catch (e) { return err('bad', 'Nội dung không đúng định dạng.', 400); }
+      const now = Date.now();
+      await db.prepare('INSERT INTO content (id, data, upd) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data, upd = excluded.upd').bind(cid, b.data, now).run();
+      return json({ ok: true, upd: now });
+    }
   }
   /* File nghe / PDF đề: R2 nếu đã gắn bucket (AUDIO); chưa có R2 thì file nhỏ (≤12MB) chia khúc lưu trong D1 */
   if (p === '/api/audio' && m === 'GET') {

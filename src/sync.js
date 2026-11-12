@@ -81,7 +81,7 @@ const CF = {
       this.lastOk = Date.now();
       setSync('cloud', 'Đã đồng bộ ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' (Cloudflare)');
       if (changed) rerenderAfterRemote();
-      if (!C || Date.now() - (CF.cAt || 0) > 6 * 3600e3) { CF.cAt = Date.now(); fetchContent().then(ok => { if (ok && !busyView()) render(); }); }
+      if (!Object.keys(CS).length || Date.now() - (CF.cAt || 0) > 6 * 3600e3) { CF.cAt = Date.now(); fetchContent().then(ok => { if (ok && !busyView()) render(); }); }
       if (route === 'plan' && !opts.keepalive) { await this.devices(); if (!changed) { const box = document.querySelector('.devlist'); if (box) box.outerHTML = devListHTML(); } }
     } catch (e) {
       if (e.status === 401) { this.cfg = null; this.store(); SY.kind = null; setSync('error', 'Máy này đã bị ngắt (khóa đồng bộ đã đổi). Hãy ghép lại ở mục Cài đặt.'); }

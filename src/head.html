@@ -394,6 +394,9 @@ code.big { display: inline-block; font-size: 1.1rem; letter-spacing: .06em; padd
 .pimgs { display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 220px); overflow-y: auto; }
 .pimgs img { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
 @media (prefers-color-scheme: dark) { .pimgs img { filter: invert(.88) hue-rotate(180deg); } }
+.lvbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 12px; padding-bottom: 12px; }
+.lvsw button { min-width: 52px; font-weight: 600; }
+.exnote { margin: 10px 0 0; padding: 10px 12px; border-left: 3px solid var(--ai, #2B428F); background: color-mix(in srgb, var(--ai, #2B428F) 7%, transparent); border-radius: 0 8px 8px 0; font-size: .92rem; }
 .optimg { max-width: 100%; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
 .phrbox { display: flex; gap: 8px; flex-wrap: wrap; }
 .phrbox input { flex: 1 1 200px; }
@@ -466,7 +469,7 @@ code.big { display: inline-block; font-size: 1.1rem; letter-spacing: .06em; padd
 </style>
 <div class="app">
   <aside class="side">
-    <div class="brand"><span class="seal" lang="ja">合</span><div><b>Luyện đề N2</b><small>Nghe · Đọc · Ôn phần yếu</small></div></div>
+    <div class="brand"><span class="seal" lang="ja">合</span><div><b>Luyện đề <span id="brandlv">N2</span></b><small>Nghe · Đọc · Ôn phần yếu</small></div></div>
     <nav id="nav" class="nav" aria-label="Mục chính"></nav>
     <div class="syncmini"><span class="dot syncdot"></span><span id="syncshort">Lưu trên máy</span></div>
   </aside>

@@ -66,28 +66,29 @@ function startListen(ids, label) {
   if (route !== 'listen') go('listen'); else render();
 }
 function lpItem() { return ITEM[LP.ids[LP.i]]; }
-function listenOptsVisible(it) { const md = SET[it.set].md; return LP.showOpts || md === 1 || md === 2 || LP.shown; }
+function listenOptsVisible(it) { const md = SET[it.set].md; return LP.showOpts || (MDL()[md] || {}).opts === 'print' || LP.shown; }
 VIEWS.listen = () => {
   if (!C) return noContent();
   if (LP && !LP.done) return lpView();
   if (LP && LP.done) return lpSummary();
-  const sets = C.sets.filter(s => s.kind === 'L' && (LPICK.tab === 'all' || s.src === (LPICK.tab === 'c2' ? 'c2-' : 'f-')) && (!LPICK.md || s.md === LPICK.md));
+  const n2 = curLv() === 'N2', mds = Object.keys(MDL()).map(Number); if (!mds.includes(LPICK.md)) LPICK.md = 0;
+  const sets = C.sets.filter(s => s.kind === 'L' && (!n2 || LPICK.tab === 'all' || s.src === (LPICK.tab === 'c2' ? 'c2-' : 'f-')) && (!LPICK.md || s.md === LPICK.md));
   const wd = weakDue('L');
   return `<h1 class="pt">Luyện nghe <span lang="ja">聴解</span></h1>
   ${wd.length ? `<section class="panel ptnudge"><span><b>${wd.length} câu nghe sai</b> đến hạn làm lại.</span><button class="btn pri" data-a="lpWeak">Làm lại câu sai</button></section>` : ''}
   <section class="panel">
-    <div class="ph"><div class="seg">${[['c2', 'Chặng 2 (luyện đề)'], ['f', 'Nền tảng'], ['all', 'Tất cả']].map(([k, v]) => `<button class="${LPICK.tab === k ? 'on' : ''}" data-a="lpTab" data-v="${k}">${v}</button>`).join('')}</div>
-    <div class="chips">${[0, 1, 2, 3, 4, 5].map(m => `<button class="chip${LPICK.md === m ? ' on' : ''}" data-a="lpMd" data-v="${m}">${m ? '問題' + m : 'Mọi dạng'}</button>`).join('')}</div></div>
-    <div class="sets">${sets.map(s => setCard(s)).join('') || '<p class="muted">Không có bộ nào.</p>'}</div>
+    <div class="ph">${n2 ? `<div class="seg">${[['c2', 'Chặng 2 (luyện đề)'], ['f', 'Nền tảng'], ['all', 'Tất cả']].map(([k, v]) => `<button class="${LPICK.tab === k ? 'on' : ''}" data-a="lpTab" data-v="${k}">${v}</button>`).join('')}</div>` : `<h2>Bộ luyện ${curLv()}</h2>`}
+    <div class="chips">${[0, ...mds].map(m => `<button class="chip${LPICK.md === m ? ' on' : ''}" data-a="lpMd" data-v="${m}">${m ? '問題' + m : 'Mọi dạng'}</button>`).join('')}</div></div>
+    <div class="sets">${sets.map(s => setCard(s)).join('') || `<p class="muted">Chưa có bộ luyện nghe cho ${curLv()}. Vào Thi thử để luyện từng 問題 bằng đề.</p>`}</div>
   </section>
   <section class="panel"><div class="ph"><h2>Luyện theo dạng (trộn các bộ)</h2></div>
-    <div class="mdgrid">${[1, 2, 3, 4, 5].map(m => { const ids = C.sets.filter(s => s.kind === 'L' && s.md === m).flatMap(s => s.items.map(i => i.id)); const st = typeStats('L' + m); return `<div class="mdc"><b lang="ja">問題${m} ${MD[m].ja}</b><span class="muted">${MD[m].vi} · ${ids.length} câu</span>${st.done ? `<span class="num">${st.lastPct}% đúng (gần nhất)</span>` : '<span class="muted">chưa làm</span>'}<button class="btn sm" data-a="lpType" data-v="${m}">10 câu</button></div>`; }).join('')}</div>
-    <label class="check"><input type="checkbox" data-a="setShowOpts" ${S.set.showOpts ? 'checked' : ''}><span>Hiện chữ lựa chọn cho dạng 3, 4, 5 (đề thật chỉ đọc, không in)</span></label>
+    <div class="mdgrid">${mds.map(m => { const ids = C.sets.filter(s => s.kind === 'L' && s.md === m).flatMap(s => s.items.map(i => i.id)); const st = typeStats('L' + m); return `<div class="mdc"><b lang="ja">問題${m} ${MDL()[m].ja}</b><span class="muted">${MDL()[m].vi} · ${ids.length} câu</span>${st.done ? `<span class="num">${st.lastPct}% đúng (gần nhất)</span>` : '<span class="muted">chưa làm</span>'}<button class="btn sm" data-a="lpType" data-v="${m}" ${ids.length ? '' : 'disabled'}>10 câu</button></div>`; }).join('')}</div>
+    <label class="check"><input type="checkbox" data-a="setShowOpts" ${S.set.showOpts ? 'checked' : ''}><span>Hiện chữ lựa chọn cho các dạng chỉ đọc lựa chọn (đề thật không in chữ)</span></label>
   </section>`;
 };
 function setCard(s) {
   const n = s.items.length, done = s.items.filter(i => attempts(i.id).length).length, ok = s.items.filter(i => { const a = attempts(i.id); return a.length && a[a.length - 1][2]; }).length;
-  const st = s.kind === 'L' ? `問題${s.md} ${MD[s.md].ja}` : [...new Set(s.passages.map(p => p.type))].join(' · ');
+  const st = s.kind === 'L' ? `問題${s.md} ${MDL()[s.md].ja}` : [...new Set(s.passages.map(p => p.type))].join(' · ');
   return `<div class="dk"><div class="dk-h"><b>${esc(setTitle(s))}</b><span class="tag" lang="ja">${esc(st)}</span></div>
     <div class="dk-bar"><i class="m" style="width:${pct(ok, n)}%"></i><i class="s" style="width:${pct(done - ok, n)}%"></i></div>
     <div class="dk-f"><span class="num">${done ? `${ok}/${n} đúng` : `${n} câu`}</span><button class="btn sm ${done ? '' : 'pri'}" data-a="${s.kind === 'L' ? 'lpSet' : 'rpSet'}" data-v="${s.id}">${done ? 'Làm lại' : 'Bắt đầu'}</button></div></div>`;
@@ -104,11 +105,11 @@ function lpView() {
       }).join('')}</div></div>`;
   }).join('');
   const showQ = LP.shown || LP.showOpts;
-  return `<div class="rv-top"><button class="btn ghost sm" data-a="lpQuit">Thoát</button><span class="muted">${esc(setTitle(s))} · <span lang="ja">問題${md} ${MD[md].ja}</span></span><span class="num muted">${LP.i + 1}/${LP.ids.length}</span></div>
+  return `<div class="rv-top"><button class="btn ghost sm" data-a="lpQuit">Thoát</button><span class="muted">${esc(setTitle(s))} · <span lang="ja">問題${md} ${MDL()[md].ja}</span></span><span class="num muted">${LP.i + 1}/${LP.ids.length}</span></div>
   <div class="rv-prog"><i style="width:${LP.i / LP.ids.length * 100}%"></i></div>
   <section class="panel lpanel">
     <div class="ph"><h2>Câu ${it.n}</h2><button class="btn ghost sm" data-a="lpTip">Mẹo dạng này</button></div>
-    ${LP.tip ? `<p class="tipbox">${esc(MD[md].tip)}</p>` : ''}
+    ${LP.tip ? `<p class="tipbox">${esc(MDL()[md].tip)}</p>` : ''}
     ${playerHTML()}
     ${showQ && it.q ? `<p class="lqtext" lang="ja">${esc(it.q)}</p>` : ''}
     ${it.img ? `<img class="optimg" src="${it.img}" alt="Lựa chọn dạng hình">` : ''}
@@ -120,12 +121,13 @@ function lpView() {
 function lpReveal(it) {
   const ok = okPick(it, LP.picks);
   return `<div class="expl ${ok ? 'good' : 'bad'}"><b>${ok ? 'Đúng' : 'Sai'}</b> · đáp án ${it.ans.map(a => CIRC[a - 1]).join(' / ')}${ok ? '' : ' · bạn chọn ' + LP.picks.map(a => CIRC[a - 1]).join(' / ')}</div>
+    ${it.ex ? `<p class="exnote">${esc(it.ex)}</p>` : ''}
     ${whyChips(it.id)}
     <details class="scriptd" open><summary><b>Script</b> <span class="hint">câu tô màu là chỗ chứa đáp án</span></summary>${scriptHTML(it, it.id)}</details>
     ${phraseBox(it.id)}
     <div class="row"><button class="btn" data-a="auReplay">Nghe lại từ đầu</button><button class="btn pri" data-a="lpNext">${LP.i + 1 < LP.ids.length ? 'Câu tiếp (Enter)' : 'Xem kết quả'}</button></div>`;
 }
-AFTER.listen = () => { if (LP && !LP.done) { const it = lpItem(); if (AU.id !== it.id) audioLoad(it.id).then(() => { if (AU.el && LP && lpItem().id === it.id && !LP.shown) AU.el.play().catch(() => { }); }); else drawPlayer(); } };
+AFTER.listen = () => { if (LP && !LP.done) { const it = lpItem(); if (AU.id !== it.id) audioLoad(it.id).then(() => { if (!LP || lpItem().id !== it.id || LP.shown) return; if (AU.tts) ttsPlay(); else if (AU.el) AU.el.play().catch(() => { }); }); else drawPlayer(); } };
 function lpCheck() {
   const it = lpItem(); if (LP.picks.filter(Boolean).length < it.ans.length) { render(); return; }
   const ok = okPick(it, LP.picks); rec(it.id, LP.picks, ok, (Date.now() - LP.t0) / 1000, AU.id === it.id ? AU.plays : 0);
@@ -145,7 +147,7 @@ Object.assign(ACT, {
   lpQuit() { audioStop(); LP = LP.res.length ? { ...LP, done: true } : null; render(); },
   lpAgain() { const wrong = LP.res.filter(r => !r[1]).map(r => r[0]); startListen(wrong, 'Làm lại câu sai'); },
   lpClose() { LP = null; render(); },
-  auReplay() { if (AU.el) { AU.el.currentTime = 0; AU.el.play().catch(() => { }); } },
+  auReplay() { if (AU.tts) { ttsPlay(); return; } if (AU.el) { AU.el.currentTime = 0; AU.el.play().catch(() => { }); } },
   setShowOpts(t) { S.set.showOpts = t.checked; save(); },
 });
 function lpAdvance() { audioStop(); if (LP.i + 1 >= LP.ids.length) { LP.done = true; render(); return; } LP.i++; LP.picks = []; LP.shown = false; LP.t0 = Date.now(); LP.tip = false; render(); scrollTo(0, 0); }
@@ -179,31 +181,31 @@ VIEWS.read = () => {
   if (RP && !RP.done) return rpView();
   if (RP && RP.done) return rpSummary();
   const sets = C.sets.filter(s => s.kind === 'R'), wd = weakDue('R');
-  const types = Object.keys(RT);
+  const types = Object.keys(RTL());
   return `<h1 class="pt">Luyện đọc <span lang="ja">読解</span></h1>
   ${wd.length ? `<section class="panel ptnudge"><span><b>${wd.length} câu đọc sai</b> đến hạn làm lại.</span><button class="btn pri" data-a="rpWeak">Làm lại câu sai</button></section>` : ''}
   <section class="panel"><div class="ph"><h2>Theo dạng</h2></div>
-    <div class="mdgrid">${types.map(t => { const ps = Object.values(PASS).filter(p => p.type === t), st = typeStats('R' + t); return ps.length ? `<div class="mdc"><b lang="ja">${t}</b><span class="muted">${RT[t].vi} · ${ps.length} bài · ~${RT[t].min}′/bài</span>${st.done ? `<span class="num">${st.lastPct}% đúng · ${st.avgPass ? Math.round(st.avgPass / 60 * 10) / 10 + '′/bài' : ''}</span>` : '<span class="muted">chưa làm</span>'}<button class="btn sm" data-a="rpType" data-v="${t}">3 bài</button></div>` : ''; }).join('')}</div></section>
-  <section class="panel"><div class="ph"><h2>Theo bài</h2></div><div class="sets">${sets.map(setCard).join('')}</div></section>`;
+    <div class="mdgrid">${types.map(t => { const ps = Object.values(PASS).filter(p => p.type === t), st = typeStats('R' + t); return ps.length ? `<div class="mdc"><b lang="ja">${t}</b><span class="muted">${RTL()[t].vi} · ${ps.length} bài · ~${RTL()[t].min}′/bài</span>${st.done ? `<span class="num">${st.lastPct}% đúng · ${st.avgPass ? Math.round(st.avgPass / 60 * 10) / 10 + '′/bài' : ''}</span>` : '<span class="muted">chưa làm</span>'}<button class="btn sm" data-a="rpType" data-v="${t}">3 bài</button></div>` : ''; }).join('')}</div></section>
+  <section class="panel"><div class="ph"><h2>Theo bài</h2></div><div class="sets">${sets.map(setCard).join('') || `<p class="muted">Chưa có bài đọc cho ${curLv()}.</p>`}</div></section>`;
 };
 function rpView() {
-  const p = PASS[RP.pids[RP.i]], items = passItems(p.pid), el = (Date.now() - RP.t0) / 1000, tgt = RT[p.type].min * 60;
+  const p = PASS[RP.pids[RP.i]], items = passItems(p.pid), el = (Date.now() - RP.t0) / 1000, tgt = RTL()[p.type].min * 60;
   const qh = items.map((it, k) => {
     const o = itemOpts(it, 0) || [];
     return `<div class="rq"><p class="rqq" lang="ja"><b>${items.length > 1 ? '問' + (k + 1) + ' ' : ''}</b>${esc(it.q)}</p><div class="opts one">${o.map((x, j) => {
       const v = j + 1, picked = RP.picks[it.id] === v, cls = RP.shown ? (v === it.ans[0] ? ' right' : picked ? ' wrongp' : ' dim') : picked ? ' sel' : '';
       return `<button class="opt${cls}" data-a="rpPick" data-id="${it.id}" data-v="${v}" ${RP.shown ? 'disabled' : ''}><span class="ok-n">${v}</span><span lang="ja">${esc(x)}</span></button>`;
-    }).join('')}</div>${RP.shown ? whyChips(it.id) : ''}</div>`;
+    }).join('')}</div>${RP.shown && it.ex ? `<p class="exnote">${esc(it.ex)}</p>` : ''}${RP.shown ? whyChips(it.id) : ''}</div>`;
   }).join('');
   const all = items.every(it => RP.picks[it.id]);
   return `<div class="rv-top"><button class="btn ghost sm" data-a="rpQuit">Thoát</button><span class="muted">${esc(SET[items[0].set] ? setTitle(SET[items[0].set]) : '')} · <span lang="ja">${p.type}</span></span><span class="num muted">${RP.i + 1}/${RP.pids.length}</span></div>
   <div class="rv-prog"><i style="width:${RP.i / RP.pids.length * 100}%"></i></div>
   <div class="rgrid">
-    <section class="panel"><div class="ph"><h2 lang="ja">${p.type}</h2><span id="rtimer" class="num ${el > tgt ? 'late' : ''}" data-tgt="${tgt}">${mmss(el)} / ${RT[p.type].min}:00</span></div>
+    <section class="panel"><div class="ph"><h2 lang="ja">${p.type}</h2><span id="rtimer" class="num ${el > tgt ? 'late' : ''}" data-tgt="${tgt}">${mmss(el)} / ${RTL()[p.type].min}:00</span></div>
       ${passageHTML(p)}
       ${RP.shown ? phraseBox(p.pid) : ''}</section>
     <section class="panel rqs">${qh}
-      ${RP.shown ? `<div class="expl ${RP.lastOk === items.length ? 'good' : 'bad'}"><b>${RP.lastOk}/${items.length} đúng</b> · ${mmss(RP.lastSec)} (mục tiêu ${RT[p.type].min}′)</div><p class="hint">${esc(RT[p.type].tip)}</p><button class="btn pri" data-a="rpNext">${RP.i + 1 < RP.pids.length ? 'Bài tiếp (Enter)' : 'Xem kết quả'}</button>`
+      ${RP.shown ? `<div class="expl ${RP.lastOk === items.length ? 'good' : 'bad'}"><b>${RP.lastOk}/${items.length} đúng</b> · ${mmss(RP.lastSec)} (mục tiêu ${RTL()[p.type].min}′)</div><p class="hint">${esc(RTL()[p.type].tip)}</p><button class="btn pri" data-a="rpNext">${RP.i + 1 < RP.pids.length ? 'Bài tiếp (Enter)' : 'Xem kết quả'}</button>`
       : `<button class="btn pri" data-a="rpSubmit" ${all ? '' : 'disabled'}>Nộp bài</button>`}
     </section></div>`;
 }
@@ -239,7 +241,7 @@ function passageHTML(p, open) {
 }
 function noContent() {
   const pc = devMode() === 'pc';
-  return `<section class="panel"><h2>Chưa có tài liệu bài tập</h2>
-    <p>${CF.cfg ? (pc ? 'Vào Cài đặt → Tài liệu khóa học → chọn thư mục khóa học để tải nội dung và file nghe lên (làm một lần).' : 'Nhập tài liệu trên laptop một lần (Cài đặt → Tài liệu khóa học); điện thoại sẽ tự tải về khi đồng bộ.') : 'Bật đồng bộ ở mục Cài đặt trước, rồi nhập tài liệu trên laptop.'}</p>
+  return `<section class="panel"><h2>Chưa có tài liệu ${curLv()}</h2>${lvSwitchHTML()}
+    <p>${CF.cfg ? (pc ? 'Vào Cài đặt → Tài liệu khóa học → chọn thư mục tài liệu của cấp này để tải nội dung và file nghe lên (làm một lần).' : 'Nhập tài liệu trên laptop một lần (Cài đặt → Tài liệu khóa học); điện thoại sẽ tự tải về khi đồng bộ.') : 'Bật đồng bộ ở mục Cài đặt trước, rồi nhập tài liệu trên laptop.'}</p>
     <div class="row"><a class="btn pri" href="#plan">Mở Cài đặt</a>${CF.cfg ? '<button class="btn" data-a="contentRefresh">Kiểm tra lại</button>' : ''}</div></section>`;
 }

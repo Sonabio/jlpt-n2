@@ -23,7 +23,7 @@ function speak(text, rate = 0.9) {
    phr[id] = { t: cụm từ, n: ghi chú, src: itemId, at, s: FSRS }  (cụm lưu từ script/bài đọc, ôn trên điện thoại)
    dlog[máy][ngày] = { l: giây nghe, r: giây đọc, d: giây ôn, n: câu, c: câu đúng } */
 const LSK = 'jlpt-n2-v2', LSK_OLD = 'jlpt-n2-son-v1';
-const DEF = () => ({ v: 2, upd: 0, set: { target: '2028-07-02', dev: 'auto', showOpts: false, onePlay: false }, setUpd: 0, att: {}, phr: {}, pdel: [], flag: {}, dlog: {}, log: {}, exams: [] });
+const DEF = () => ({ v: 2, upd: 0, set: { target: '2028-07-02', dev: 'auto', showOpts: false, onePlay: false, lv: 'N2' }, setUpd: 0, att: {}, phr: {}, pdel: [], flag: {}, dlog: {}, log: {}, exams: [] });
 let S = DEF();
 function migrate(o) {
   const d = DEF(); o = o || {};
@@ -56,8 +56,8 @@ const ACTIVE = { last: Date.now() };
 ['pointerdown', 'keydown', 'scroll', 'touchstart'].forEach(ev => addEventListener(ev, () => { ACTIVE.last = Date.now(); }, { passive: true }));
 setInterval(() => {
   if (document.visibilityState !== 'visible' || Date.now() - ACTIVE.last > 120000) return;
-  const audioOn = window.AU && AU.el && !AU.el.paused;
-  const exl = route === 'exam' && EXM && EXM.run && !EXM.graded ? ((EXM.mode === 'full' ? EXM.part === 1 : EXM.sec && EXM.sec.lis) ? 'l' : 'r') : null;
+  const audioOn = window.AU && ((AU.el && !AU.el.paused) || (AU.tts && AU.tts.on));
+  const exl = route === 'exam' && EXM && EXM.run && !EXM.graded ? (exLisOn() ? 'l' : 'r') : null;
   const f = exl || (route === 'listen' && (LP || audioOn) ? 'l' : route === 'read' && RP ? 'r' : route === 'drill' && DR ? 'd' : null);
   if (!f && !audioOn) return;
   logAdd(f || 'l', 15); tickSave();
@@ -90,8 +90,10 @@ function sched(st, g) {
 function firstSunday(y, m) { const d = new Date(y, m, 1); d.setDate(1 + (7 - d.getDay()) % 7); return d; }
 function examDates() { const out = [], now = dayNum(); for (let y = 2026; y <= 2030; y++) for (const m of [6, 11]) { const d = firstSunday(y, m); if (dayNum(d) >= now) out.push({ k: dayKey(d), d }); } return out; }
 function targetExam() { const l = examDates(); return l.find(x => x.k === S.set.target) || l[0]; }
-const LEVEL_RULES = { N2: { pass: 90, secs: [['Kiến thức ngôn ngữ', 60, 19], ['Đọc hiểu', 60, 19], ['Nghe hiểu', 60, 19]] } };
-function judge(lv, s) { const R = LEVEL_RULES.N2; const total = s.reduce((a, b) => a + b, 0); const fails = R.secs.map((x, i) => s[i] < x[2] ? x[0] : null).filter(Boolean); return { total, ok: total >= R.pass && !fails.length, fails, need: R.pass }; }
+function judge(lv, s) { const R = LVD(LVDEF[lv] ? lv : 'N2').rule; const total = s.reduce((a, b) => a + b, 0); const fails = R.secs.map((x, i) => (s[i] || 0) < x[2] ? x[0] : null).filter(Boolean); return { total, ok: total >= R.pass && !fails.length, fails, need: R.pass }; }
+/* Đổi cấp đang luyện: nội dung, dạng bài, phân tích điểm yếu đều theo cấp này */
+function setLevel(lv) { if (!LVDEF[lv] || lv === curLv()) return; if (typeof audioStop === 'function') audioStop(); LP = null; RP = null; DR = null; EXM = null; S.set.lv = lv; save(); buildC(); render(); }
+function lvSwitchHTML() { return `<div class="seg lvsw" role="group" aria-label="Cấp đang luyện">${LVS.map(l => `<button class="${l === curLv() ? 'on' : ''}" data-a="setLv" data-v="${l}">${l}</button>`).join('')}</div>`; }
 
 /* ===== ĐIỀU HƯỚNG ===== */
 const ROUTES = [['today', 'Hôm nay', '今日'], ['listen', 'Luyện nghe', '聴解'], ['read', 'Luyện đọc', '読解'], ['weak', 'Điểm yếu', '弱点'], ['drill', 'Ôn nhanh', '復習'], ['exam', 'Thi thử', '模試'], ['plan', 'Cài đặt', '設定']];
@@ -100,15 +102,16 @@ let route = 'today';
 function go(r) { if (location.hash !== '#' + r) location.hash = r; else { route = r; render(); } }
 function readHash() { const h = location.hash.slice(1); route = ROUTES.some(x => x[0] === h) ? h : 'today'; }
 addEventListener('hashchange', () => { readHash(); render(); scrollTo(0, 0); });
-const ACT = {};
+const ACT = { setLv(t) { setLevel(t.dataset.v || t.value); } };
 function renderNav() {
   const ph = devMode() === 'phone', due = drillCount();
   $('#nav').innerHTML = ROUTES.filter(r => !ph || PHONE_NAV.includes(r[0]) || r[0] === route).map(([id, vi, ja]) => `<a href="#${id}" class="nv${route === id ? ' on' : ''}" ${route === id ? 'aria-current="page"' : ''}><span class="nvj" lang="ja">${ja}</span><span class="nvv">${vi}</span>${id === 'drill' && due ? `<span class="badge">${due}</span>` : ''}</a>`).join('');
 }
 const VIEWS = {};
 function render() {
+  if (render.lv !== curLv()) { render.lv = curLv(); buildC(); }
   renderNav();
-  document.body.dataset.dev = devMode();
+  document.body.dataset.dev = devMode(); const bl = $('#brandlv'); if (bl) bl.textContent = curLv();
   $('#view').innerHTML = (VIEWS[route] || VIEWS.today)();
   setSync(SY.mode, SY.msg);
   (AFTER[route] || (() => { }))();

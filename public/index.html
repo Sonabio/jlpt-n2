@@ -400,6 +400,9 @@ code.big { display: inline-block; font-size: 1.1rem; letter-spacing: .06em; padd
 .pimgs { display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 220px); overflow-y: auto; }
 .pimgs img { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
 @media (prefers-color-scheme: dark) { .pimgs img { filter: invert(.88) hue-rotate(180deg); } }
+.lvbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 12px; padding-bottom: 12px; }
+.lvsw button { min-width: 52px; font-weight: 600; }
+.exnote { margin: 10px 0 0; padding: 10px 12px; border-left: 3px solid var(--ai, #2B428F); background: color-mix(in srgb, var(--ai, #2B428F) 7%, transparent); border-radius: 0 8px 8px 0; font-size: .92rem; }
 .optimg { max-width: 100%; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
 .phrbox { display: flex; gap: 8px; flex-wrap: wrap; }
 .phrbox input { flex: 1 1 200px; }
@@ -473,7 +476,7 @@ code.big { display: inline-block; font-size: 1.1rem; letter-spacing: .06em; padd
 </head><body>
 <div class="app">
   <aside class="side">
-    <div class="brand"><span class="seal" lang="ja">合</span><div><b>Luyện đề N2</b><small>Nghe · Đọc · Ôn phần yếu</small></div></div>
+    <div class="brand"><span class="seal" lang="ja">合</span><div><b>Luyện đề <span id="brandlv">N2</span></b><small>Nghe · Đọc · Ôn phần yếu</small></div></div>
     <nav id="nav" class="nav" aria-label="Mục chính"></nav>
     <div class="syncmini"><span class="dot syncdot"></span><span id="syncshort">Lưu trên máy</span></div>
   </aside>
@@ -485,40 +488,104 @@ code.big { display: inline-block; font-size: 1.1rem; letter-spacing: .06em; padd
 /* ===== DỮ LIỆU CỐ ĐỊNH (không chứa nội dung tài liệu khóa học; nội dung đó nằm riêng trên D1, cần khóa đồng bộ) ===== */
 const L = s => s.trim().split('\n').map(r => r.trim()).filter(Boolean).map(r => r.split('|').map(x => x.trim()));
 
-/* Dạng bài nghe N2 (問題1–5) */
-const MD = {
-  1: { ja: '課題理解', vi: 'Hiểu nhiệm vụ', n: 5, tip: 'Đọc 4 lựa chọn trước khi nghe. Hỏi "まず/このあと" thì đáp án là việc làm ngay, không phải việc đã làm (Vた/Vてある). Nghe đến hết, hay bị "quay xe" sau でも/ただ/やっぱり.', opts: 'print' },
-  2: { ja: 'ポイント理解', vi: 'Hiểu điểm chính', n: 6, tip: 'Nghe câu hỏi để biết cần tìm lý do/điểm nào, rồi đọc lựa chọn. Bẫy: lý do được nhắc rồi bị phủ định; đáp án thường sau 実は/何より/一番.', opts: 'print' },
-  3: { ja: '概要理解', vi: 'Hiểu khái quát', n: 5, tip: 'Không có câu hỏi trước. Nghe ý chính và thái độ người nói (賛成/反対, tích cực/tiêu cực); câu kết luận thường ở cuối sau つまり/ですから.', opts: 'spoken' },
-  4: { ja: '即時応答', vi: 'Phản xạ nhanh', n: 12, tip: 'Một câu nói + 3 lời đáp. Nắm văn nói rút gọn (〜ちゃう, 〜なきゃ), kính ngữ và ý ẩn (khen/từ chối/than phiền). Không nghĩ lâu, chọn ngay.', opts: 'spoken' },
-  5: { ja: '統合理解', vi: 'Hiểu tổng hợp', n: 4, tip: 'Ghi chú dạng bảng: mỗi lựa chọn một dòng, ghi đặc điểm + ý kiến từng người. Câu 3 có 2 câu hỏi cho 2 người khác nhau.', opts: 'mixed' },
+/* ===== ĐỊNH NGHĨA THEO CẤP (N5 → N2): dạng bài nghe, dạng đọc, cấu trúc đề, cách tính điểm ===== */
+const LIS = {
+  kadai: { ja: '課題理解', vi: 'Hiểu nhiệm vụ', opts: 'print', tip: 'Đọc 4 lựa chọn trước khi nghe. Hỏi "まず/このあと" thì đáp án là việc làm ngay, không phải việc đã làm (Vた/Vてある). Nghe đến hết, hay bị "quay xe" sau でも/ただ/やっぱり.' },
+  point: { ja: 'ポイント理解', vi: 'Hiểu điểm chính', opts: 'print', tip: 'Nghe câu hỏi để biết cần tìm lý do/điểm nào, rồi đọc lựa chọn. Bẫy: lý do được nhắc rồi bị phủ định; đáp án thường sau 実は/何より/一番.' },
+  gaiyo: { ja: '概要理解', vi: 'Hiểu khái quát', opts: 'spoken', tip: 'Không có câu hỏi trước. Nghe ý chính và thái độ người nói (賛成/反対, tích cực/tiêu cực); câu kết luận thường ở cuối sau つまり/ですから.' },
+  hatsuwa: { ja: '発話表現', vi: 'Nói gì trong tình huống', opts: 'spoken', nopt: 3, tip: 'Nghe tình huống: ai nói với ai, muốn nhờ/mời/xin phép/xin lỗi? Phân biệt người làm hành động: 〜てもいいですか (mình làm) với 〜てくれませんか (nhờ người kia làm).' },
+  sokuji: { ja: '即時応答', vi: 'Phản xạ nhanh', opts: 'spoken', nopt: 3, tip: 'Một câu nói + 3 lời đáp. Nắm văn nói rút gọn (〜ちゃう, 〜なきゃ), kính ngữ và ý ẩn (khen/từ chối/than phiền). Không nghĩ lâu, chọn ngay.' },
+  togo: { ja: '統合理解', vi: 'Hiểu tổng hợp', opts: 'mixed', tip: 'Ghi chú dạng bảng: mỗi lựa chọn một dòng, ghi đặc điểm + ý kiến từng người. Câu 3 có 2 câu hỏi cho 2 người khác nhau.' },
 };
-/* Dạng bài đọc + thời gian mục tiêu (phút) */
-const RT = {
-  '短文': { vi: 'Đoạn ngắn', min: 2, tip: 'Đọc câu hỏi trước. Ý chính thường ở câu cuối hoặc sau しかし/つまり/ のである.' },
-  '中文': { vi: 'Đoạn trung bình', min: 5, tip: 'Mỗi câu hỏi ứng với một đoạn theo thứ tự. Gạch dưới từ chỉ quan điểm tác giả.' },
-  '長文': { vi: 'Bài dài (主張理解)', min: 9, tip: 'Tìm chủ trương của tác giả; câu hỏi cuối thường hỏi toàn bài, đọc lại đoạn kết.' },
-  '統合理解': { vi: 'So sánh A/B', min: 6, tip: 'Đọc câu hỏi trước, rồi đánh dấu điểm giống/khác của A và B về đúng vấn đề được hỏi.' },
-  '情報検索': { vi: 'Tìm thông tin', min: 6, tip: 'Đọc câu hỏi và điều kiện trước; quét bảng tìm đúng điều kiện, chú ý ※ và ngoại lệ.' },
+const mkLis = (...a) => { const o = {}; a.forEach(([k, n], i) => { o[i + 1] = { ...LIS[k], n }; }); return o; };
+const RTD = {
+  '短文': { vi: 'Đoạn ngắn', tip: 'Đọc câu hỏi trước. Ý chính thường ở câu cuối hoặc sau しかし/つまり/ のである.' },
+  '中文': { vi: 'Đoạn trung bình', tip: 'Mỗi câu hỏi ứng với một đoạn theo thứ tự. Gạch dưới từ chỉ quan điểm, lý do (から/ので/ため).' },
+  '長文': { vi: 'Bài dài', tip: 'Tìm chủ trương của tác giả; câu hỏi cuối thường hỏi toàn bài, đọc lại đoạn kết.' },
+  '統合理解': { vi: 'So sánh A/B', tip: 'Đọc câu hỏi trước, rồi đánh dấu điểm giống/khác của A và B về đúng vấn đề được hỏi.' },
+  '情報検索': { vi: 'Tìm thông tin', tip: 'Đọc câu hỏi và điều kiện trước; quét bảng tìm đúng điều kiện, chú ý ※ và ngoại lệ.' },
 };
+const mkRt = o => { const r = {}; Object.entries(o).forEach(([k, min]) => { r[k] = { ...RTD[k], min }; }); return r; };
+/* parts: md|bài thi (pp)|file PDF (f)|số 問題 in trên đề|tên|làm gì|số câu|K hay R|dạng đọc */
+const mkParts = s => L(s).map(r => ({ md: +r[0], pp: +r[1], f: +r[2], no: +r[3], ja: r[4], vi: r[5], n: r[6], sec: r[7], rt: r[8] || null }));
+const SEC3 = pass => ({ pass, secs: [['Kiến thức ngôn ngữ', 60, 19], ['Đọc hiểu', 60, 19], ['Nghe hiểu', 60, 19]] });
+const SEC2 = pass => ({ pass, secs: [['Kiến thức ngôn ngữ + Đọc', 120, 38], ['Nghe hiểu', 60, 19]] });
+const LVS = ['N5', 'N4', 'N3', 'N2'];
+const LVDEF = {
+  N5: {
+    lis: mkLis(['kadai', 7], ['point', 6], ['hatsuwa', 5], ['sokuji', 6]), rt: mkRt({ '短文': 3, '中文': 6, '情報検索': 4 }), rule: SEC2(80),
+    papers: [{ ja: '文字・語彙', vi: 'Chữ + từ vựng', min: 20 }, { ja: '文法・読解', vi: 'Ngữ pháp + Đọc', min: 40 }, { ja: '聴解', vi: 'Nghe hiểu', min: 30, lis: true }],
+    parts: mkParts(`
+1|0|0|1|漢字読み|Chọn cách đọc kanji|7|K
+2|0|0|2|表記|Chọn chữ viết đúng|5|K
+3|0|0|3|文脈規定|Chọn từ hợp ngữ cảnh|6|K
+4|0|0|4|言い換え類義|Câu đồng nghĩa|3|K
+5|1|1|1|文法形式の判断|Chọn trợ từ/mẫu ngữ pháp|9|K
+6|1|1|2|文の組み立て|Sắp xếp 4 mảnh, chọn ★|4|K
+7|1|1|3|文章の文法|Ngữ pháp trong đoạn văn|4|K
+8|1|2|4|内容理解(短文)|Đọc ngắn ~80 chữ|2|R|短文
+9|1|2|5|内容理解(中文)|Đọc trung bình ~250 chữ|2|R|中文
+10|1|2|6|情報検索|Tìm thông tin trong thông báo|1|R|情報検索`),
+  },
+  N4: {
+    lis: mkLis(['kadai', 8], ['point', 7], ['hatsuwa', 5], ['sokuji', 8]), rt: mkRt({ '短文': 3, '中文': 7, '情報検索': 5 }), rule: SEC2(90),
+    papers: [{ ja: '文字・語彙', vi: 'Chữ + từ vựng', min: 25 }, { ja: '文法・読解', vi: 'Ngữ pháp + Đọc', min: 55 }, { ja: '聴解', vi: 'Nghe hiểu', min: 35, lis: true }],
+    parts: mkParts(`
+1|0|0|1|漢字読み|Chọn cách đọc kanji|7|K
+2|0|0|2|表記|Chọn kanji cho từ viết bằng kana|5|K
+3|0|0|3|文脈規定|Chọn từ hợp ngữ cảnh|8|K
+4|0|0|4|言い換え類義|Câu đồng nghĩa|4|K
+5|0|0|5|用法|Câu dùng từ đúng|4|K
+6|1|1|1|文法形式の判断|Chọn mẫu ngữ pháp|13|K
+7|1|1|2|文の組み立て|Sắp xếp 4 mảnh, chọn ★|4|K
+8|1|1|3|文章の文法|Ngữ pháp trong đoạn văn|4|K
+9|1|2|4|内容理解(短文)|Đọc ngắn 100–200 chữ|3|R|短文
+10|1|2|5|内容理解(中文)|Đọc trung bình ~450 chữ|3|R|中文
+11|1|2|6|情報検索|Tìm thông tin trong thông báo|2|R|情報検索`),
+  },
+  N3: {
+    lis: mkLis(['kadai', 6], ['point', 6], ['gaiyo', 3], ['hatsuwa', 4], ['sokuji', 9]), rt: mkRt({ '短文': 3, '中文': 7, '長文': 10, '情報検索': 6 }), rule: SEC3(95),
+    papers: [{ ja: '文字・語彙', vi: 'Chữ + từ vựng', min: 30 }, { ja: '文法・読解', vi: 'Ngữ pháp + Đọc', min: 70 }, { ja: '聴解', vi: 'Nghe hiểu', min: 40, lis: true }],
+    parts: mkParts(`
+1|0|0|1|漢字読み|Chọn cách đọc kanji|8|K
+2|0|0|2|表記|Chọn kanji cho từ viết bằng kana|6|K
+3|0|0|3|文脈規定|Chọn từ hợp ngữ cảnh|11|K
+4|0|0|4|言い換え類義|Từ/cụm đồng nghĩa|5|K
+5|0|0|5|用法|Câu dùng từ đúng|5|K
+6|1|1|1|文法形式の判断|Chọn mẫu ngữ pháp|13|K
+7|1|1|2|文の組み立て|Sắp xếp 4 mảnh, chọn ★|5|K
+8|1|1|3|文章の文法|Ngữ pháp trong đoạn văn|5|K
+9|1|2|4|内容理解(短文)|Đọc ngắn 150–200 chữ|4|R|短文
+10|1|2|5|内容理解(中文)|Đọc trung bình ~350 chữ|6|R|中文
+11|1|2|6|内容理解(長文)|Bài dài ~550 chữ|4|R|長文
+12|1|2|7|情報検索|Tìm thông tin ~600 chữ|2|R|情報検索`),
+  },
+  N2: {
+    lis: mkLis(['kadai', 5], ['point', 6], ['gaiyo', 5], ['sokuji', 12], ['togo', 4]), rt: mkRt({ '短文': 2, '中文': 5, '長文': 9, '統合理解': 6, '情報検索': 6 }), rule: SEC3(90),
+    papers: [{ ja: '言語知識・読解', vi: 'Kiến thức ngôn ngữ + Đọc hiểu', min: 105 }, { ja: '聴解', vi: 'Nghe hiểu', min: 50, lis: true }],
+    parts: mkParts(`
+1|0|0|1|漢字読み|Chọn cách đọc kanji|5|K
+2|0|0|2|表記|Chọn kanji cho từ viết bằng kana|5|K
+3|0|0|3|語形成|Tiền tố/hậu tố|3–5|K
+4|0|0|4|文脈規定|Chọn từ hợp ngữ cảnh|7|K
+5|0|0|5|言い換え類義|Từ/cụm đồng nghĩa|5|K
+6|0|0|6|用法|Câu dùng từ đúng|5|K
+7|0|0|7|文法形式の判断|Chọn mẫu ngữ pháp|12|K
+8|0|0|8|文の組み立て|Sắp xếp 4 mảnh, chọn ★|5|K
+9|0|0|9|文章の文法|Ngữ pháp trong đoạn văn|5|K
+10|0|0|10|内容理解(短文)|Đọc ngắn ~200 chữ · 2 phút/bài|5|R|短文
+11|0|0|11|内容理解(中文)|Đọc trung bình ~500 chữ · 5–6 phút/bài|9|R|中文
+12|0|0|12|統合理解|So sánh 2 bài A/B · 6 phút|2|R|統合理解
+13|0|0|13|主張理解|Bài dài ~900 chữ · 10 phút|3|R|長文
+14|0|0|14|情報検索|Tìm thông tin trong bảng · 5 phút|2|R|情報検索`),
+  },
+};
+LVDEF.N2.lis[4].nopt = 3;
+const curLv = () => (typeof S !== 'undefined' && S.set && LVDEF[S.set.lv]) ? S.set.lv : 'N2';
+const LVD = lv => LVDEF[lv] || LVDEF[curLv()];
+const MDL = () => LVD().lis, RTL = () => LVD().rt, PARTS = lv => LVD(lv).parts;
+const PART = (md, lv) => PARTS(lv).find(p => p.md === +md);
 const WHY = [['nghe', 'Không nghe kịp/không nhận ra từ'], ['tu', 'Không biết từ/ngữ pháp'], ['bay', 'Bị bẫy (đổi ý, phủ định)'], ['cau', 'Hiểu sai câu hỏi'], ['gio', 'Thiếu thời gian'], ['doan', 'Đoán bừa']];
-
-const EXAM_PARTS = L(`
-1|漢字読み|Chọn cách đọc kanji|5
-2|表記|Chọn kanji cho từ viết bằng kana|5
-3|語形成|Tiền tố/hậu tố|3–5
-4|文脈規定|Chọn từ hợp ngữ cảnh|7
-5|言い換え類義|Từ/cụm đồng nghĩa|5
-6|用法|Câu dùng từ đúng|5
-7|文法形式の判断|Chọn mẫu ngữ pháp|12
-8|文の組み立て|Sắp xếp 4 mảnh, chọn ★|5
-9|文章の文法|Ngữ pháp trong đoạn văn|5
-10|内容理解(短文)|Đọc ngắn ~200 chữ · 2 phút/bài|5
-11|内容理解(中文)|Đọc trung bình ~500 chữ · 5–6 phút/bài|9
-12|統合理解|So sánh 2 bài A/B · 6 phút|2
-13|主張理解|Bài dài ~900 chữ · 10 phút|3
-14|情報検索|Tìm thông tin trong bảng · 5 phút|2
-`);
 /* ===== UTIL ===== */
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -544,7 +611,7 @@ function speak(text, rate = 0.9) {
    phr[id] = { t: cụm từ, n: ghi chú, src: itemId, at, s: FSRS }  (cụm lưu từ script/bài đọc, ôn trên điện thoại)
    dlog[máy][ngày] = { l: giây nghe, r: giây đọc, d: giây ôn, n: câu, c: câu đúng } */
 const LSK = 'jlpt-n2-v2', LSK_OLD = 'jlpt-n2-son-v1';
-const DEF = () => ({ v: 2, upd: 0, set: { target: '2028-07-02', dev: 'auto', showOpts: false, onePlay: false }, setUpd: 0, att: {}, phr: {}, pdel: [], flag: {}, dlog: {}, log: {}, exams: [] });
+const DEF = () => ({ v: 2, upd: 0, set: { target: '2028-07-02', dev: 'auto', showOpts: false, onePlay: false, lv: 'N2' }, setUpd: 0, att: {}, phr: {}, pdel: [], flag: {}, dlog: {}, log: {}, exams: [] });
 let S = DEF();
 function migrate(o) {
   const d = DEF(); o = o || {};
@@ -577,8 +644,8 @@ const ACTIVE = { last: Date.now() };
 ['pointerdown', 'keydown', 'scroll', 'touchstart'].forEach(ev => addEventListener(ev, () => { ACTIVE.last = Date.now(); }, { passive: true }));
 setInterval(() => {
   if (document.visibilityState !== 'visible' || Date.now() - ACTIVE.last > 120000) return;
-  const audioOn = window.AU && AU.el && !AU.el.paused;
-  const exl = route === 'exam' && EXM && EXM.run && !EXM.graded ? ((EXM.mode === 'full' ? EXM.part === 1 : EXM.sec && EXM.sec.lis) ? 'l' : 'r') : null;
+  const audioOn = window.AU && ((AU.el && !AU.el.paused) || (AU.tts && AU.tts.on));
+  const exl = route === 'exam' && EXM && EXM.run && !EXM.graded ? (exLisOn() ? 'l' : 'r') : null;
   const f = exl || (route === 'listen' && (LP || audioOn) ? 'l' : route === 'read' && RP ? 'r' : route === 'drill' && DR ? 'd' : null);
   if (!f && !audioOn) return;
   logAdd(f || 'l', 15); tickSave();
@@ -611,8 +678,10 @@ function sched(st, g) {
 function firstSunday(y, m) { const d = new Date(y, m, 1); d.setDate(1 + (7 - d.getDay()) % 7); return d; }
 function examDates() { const out = [], now = dayNum(); for (let y = 2026; y <= 2030; y++) for (const m of [6, 11]) { const d = firstSunday(y, m); if (dayNum(d) >= now) out.push({ k: dayKey(d), d }); } return out; }
 function targetExam() { const l = examDates(); return l.find(x => x.k === S.set.target) || l[0]; }
-const LEVEL_RULES = { N2: { pass: 90, secs: [['Kiến thức ngôn ngữ', 60, 19], ['Đọc hiểu', 60, 19], ['Nghe hiểu', 60, 19]] } };
-function judge(lv, s) { const R = LEVEL_RULES.N2; const total = s.reduce((a, b) => a + b, 0); const fails = R.secs.map((x, i) => s[i] < x[2] ? x[0] : null).filter(Boolean); return { total, ok: total >= R.pass && !fails.length, fails, need: R.pass }; }
+function judge(lv, s) { const R = LVD(LVDEF[lv] ? lv : 'N2').rule; const total = s.reduce((a, b) => a + b, 0); const fails = R.secs.map((x, i) => (s[i] || 0) < x[2] ? x[0] : null).filter(Boolean); return { total, ok: total >= R.pass && !fails.length, fails, need: R.pass }; }
+/* Đổi cấp đang luyện: nội dung, dạng bài, phân tích điểm yếu đều theo cấp này */
+function setLevel(lv) { if (!LVDEF[lv] || lv === curLv()) return; if (typeof audioStop === 'function') audioStop(); LP = null; RP = null; DR = null; EXM = null; S.set.lv = lv; save(); buildC(); render(); }
+function lvSwitchHTML() { return `<div class="seg lvsw" role="group" aria-label="Cấp đang luyện">${LVS.map(l => `<button class="${l === curLv() ? 'on' : ''}" data-a="setLv" data-v="${l}">${l}</button>`).join('')}</div>`; }
 
 /* ===== ĐIỀU HƯỚNG ===== */
 const ROUTES = [['today', 'Hôm nay', '今日'], ['listen', 'Luyện nghe', '聴解'], ['read', 'Luyện đọc', '読解'], ['weak', 'Điểm yếu', '弱点'], ['drill', 'Ôn nhanh', '復習'], ['exam', 'Thi thử', '模試'], ['plan', 'Cài đặt', '設定']];
@@ -621,15 +690,16 @@ let route = 'today';
 function go(r) { if (location.hash !== '#' + r) location.hash = r; else { route = r; render(); } }
 function readHash() { const h = location.hash.slice(1); route = ROUTES.some(x => x[0] === h) ? h : 'today'; }
 addEventListener('hashchange', () => { readHash(); render(); scrollTo(0, 0); });
-const ACT = {};
+const ACT = { setLv(t) { setLevel(t.dataset.v || t.value); } };
 function renderNav() {
   const ph = devMode() === 'phone', due = drillCount();
   $('#nav').innerHTML = ROUTES.filter(r => !ph || PHONE_NAV.includes(r[0]) || r[0] === route).map(([id, vi, ja]) => `<a href="#${id}" class="nv${route === id ? ' on' : ''}" ${route === id ? 'aria-current="page"' : ''}><span class="nvj" lang="ja">${ja}</span><span class="nvv">${vi}</span>${id === 'drill' && due ? `<span class="badge">${due}</span>` : ''}</a>`).join('');
 }
 const VIEWS = {};
 function render() {
+  if (render.lv !== curLv()) { render.lv = curLv(); buildC(); }
   renderNav();
-  document.body.dataset.dev = devMode();
+  document.body.dataset.dev = devMode(); const bl = $('#brandlv'); if (bl) bl.textContent = curLv();
   $('#view').innerHTML = (VIEWS[route] || VIEWS.today)();
   setSync(SY.mode, SY.msg);
   (AFTER[route] || (() => { }))();
@@ -726,7 +796,7 @@ const CF = {
       this.lastOk = Date.now();
       setSync('cloud', 'Đã đồng bộ ' + new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' (Cloudflare)');
       if (changed) rerenderAfterRemote();
-      if (!C || Date.now() - (CF.cAt || 0) > 6 * 3600e3) { CF.cAt = Date.now(); fetchContent().then(ok => { if (ok && !busyView()) render(); }); }
+      if (!Object.keys(CS).length || Date.now() - (CF.cAt || 0) > 6 * 3600e3) { CF.cAt = Date.now(); fetchContent().then(ok => { if (ok && !busyView()) render(); }); }
       if (route === 'plan' && !opts.keepalive) { await this.devices(); if (!changed) { const box = document.querySelector('.devlist'); if (box) box.outerHTML = devListHTML(); } }
     } catch (e) {
       if (e.status === 401) { this.cfg = null; this.store(); SY.kind = null; setSync('error', 'Máy này đã bị ngắt (khóa đồng bộ đã đổi). Hãy ghép lại ở mục Cài đặt.'); }
@@ -816,35 +886,52 @@ function handlePairHash() {
   cfRun(() => CF.claim(m[1]), 'Đã ghép máy này và gộp dữ liệu');
   return true;
 }
-/* ===== NỘI DUNG BÀI TẬP (tài liệu khóa học, lưu riêng trên D1, chỉ máy đã ghép mới tải được) ===== */
-const CK = 'jlpt-n2-content';
-let C = null;                 // { v, name, sets: [...] }
+/* ===== NỘI DUNG BÀI TẬP (lưu riêng trên D1, chỉ máy đã ghép mới tải được) =====
+   Hai kho: 'main' = tài liệu N2; 'n345' = đề chính thức + bài luyện N3–N5. Mỗi bộ/đề có lv; C là phần của cấp đang luyện. */
+const SLOTS = ['main', 'n345'];
+const CK = k => 'jlpt-n2-content' + (k === 'main' ? '' : '-' + k);
+const CS = {};                // slot → { sets, exams, upd }
+let C = null;                 // { sets, exams } của cấp đang luyện (null nếu cấp này chưa có gì)
 const ITEM = {}, SET = {}, PASS = {};
+const lvOf = x => x.lv || 'N2';
+function allSets() { return SLOTS.flatMap(k => (CS[k] && CS[k].sets) || []); }
+function allExams() { return SLOTS.flatMap(k => (CS[k] && CS[k].exams) || []); }
+function buildC() {
+  const lv = curLv(), sets = allSets().filter(s => lvOf(s) === lv), exams = allExams().filter(e => lvOf(e) === lv);
+  C = sets.length || exams.length ? { sets, exams } : null;
+  indexContent();
+}
 function indexContent() {
   for (const k in ITEM) delete ITEM[k]; for (const k in SET) delete SET[k]; for (const k in PASS) delete PASS[k];
   if (!C) return;
   C.sets.forEach(s => {
     SET[s.id] = s;
     (s.passages || []).forEach(p => { PASS[p.pid] = p; });
-    s.items.forEach((it, i) => { ITEM[it.id] = { ...it, set: s.id, kind: s.kind, i, type: s.kind === 'L' ? 'L' + s.md : 'R' + PASS[it.pid].type }; });
+    s.items.forEach((it, i) => { ITEM[it.id] = { ...it, tts: it.tts || s.tts, set: s.id, kind: s.kind, i, type: s.kind === 'L' ? 'L' + s.md : 'R' + PASS[it.pid].type }; });
   });
 }
-function setTitle(s) { return s.src === 'f-' ? `Nền tảng · Chương ${s.unit}` : `Chặng 2 · Bài ${s.unit}`; }
-function typeName(t) { return t[0] === 'L' ? `問題${t[1]} ${MD[t[1]].ja}` : t[0] === 'K' ? `問題${t[1]} ${EXAM_PARTS[t[1] - 1][1]}` : `${t.slice(1)}`; }
-function typeVi(t) { return t[0] === 'L' ? `Nghe ${t[1]} · ${MD[t[1]].vi}` : t[0] === 'K' ? `${+t[1] <= 6 ? 'Từ vựng' : 'Ngữ pháp'} · ${EXAM_PARTS[t[1] - 1][2]}` : `Đọc · ${RT[t.slice(1)].vi}`; }
-function loadContentLocal() { try { const r = localStorage.getItem(CK); if (r) { C = JSON.parse(r); indexContent(); } } catch (e) { C = null; } }
+function setTitle(s) { return s.title || (s.src === 'f-' ? `Nền tảng · Chương ${s.unit}` : `Chặng 2 · Bài ${s.unit}`); }
+const PPS = p => p.sec === 'R' ? '読解' : LVD().papers.length > 2 ? (p.pp ? '文法' : '文字語彙') : '';
+function typeName(t) { if (t[0] === 'L') return `聴解 問題${t[1]} ${MDL()[t[1]].ja}`; if (t[0] === 'K') { const p = PART(t.slice(1)); return `${PPS(p)} 問題${p.no} ${p.ja}`.trim(); } return `読解 ${t.slice(1)}`; }
+function typeVi(t) { if (t[0] === 'L') return `Nghe ${t[1]} · ${MDL()[t[1]].vi}`; if (t[0] === 'K') { const p = PART(t.slice(1)); return `${p.pp || (LVD().papers.length < 3 && p.md >= 7) ? 'Ngữ pháp' : 'Từ vựng'} · ${p.vi}`; } return `Đọc · ${RTL()[t.slice(1)].vi}`; }
+function loadContentLocal() { SLOTS.forEach(k => { try { const r = localStorage.getItem(CK(k)); if (r) CS[k] = JSON.parse(r); } catch (e) { } }); buildC(); }
 async function fetchContent(force) {
   if (!CF.cfg) return false;
-  try {
-    const r = await CF.call('/content' + (C && !force ? '?since=' + (C.upd || 0) : ''));
-    if (r && r.data) { C = JSON.parse(r.data); C.upd = r.upd; try { localStorage.setItem(CK, JSON.stringify(C)); } catch (e) { } indexContent(); return true; }
-  } catch (e) { }
-  return false;
+  let got = false;
+  for (const k of SLOTS) {
+    try {
+      const q = [k === 'main' ? '' : 'slot=' + k, CS[k] && !force ? 'since=' + (CS[k].upd || 0) : ''].filter(Boolean).join('&');
+      const r = await CF.call('/content' + (q ? '?' + q : ''));
+      if (r && r.data) { CS[k] = JSON.parse(r.data); CS[k].upd = r.upd; try { localStorage.setItem(CK(k), JSON.stringify(CS[k])); } catch (e) { } got = true; }
+    } catch (e) { }
+  }
+  if (got) buildC();
+  return got;
 }
 loadContentLocal();
 
 /* ----- Âm thanh: tải từ máy chủ (cần khóa), giữ trong Cache Storage để nghe lại offline ----- */
-const AU = { el: null, url: null, id: null, plays: 0, loading: false, rate: 1 };
+const AU = { el: null, url: null, id: null, plays: 0, loading: false, rate: 1, tts: null };
 const ACACHE = 'jlpt-audio-v1';
 async function audioBlob(id) {
   const key = location.origin + '/__audio/' + encodeURIComponent(id);
@@ -859,18 +946,23 @@ async function audioBlob(id) {
 }
 async function audioLoad(id) {
   if (AU.id === id && AU.url) return;
-  audioStop(); AU.id = id; AU.loading = true; AU.err = null; AU.plays = 0; drawPlayer();
+  audioStop(); if (ITEM[id] && ITEM[id].tts) { AU.id = id; AU.plays = 0; AU.err = null; AU.tts = { q: ttsLines(ITEM[id]), i: 0, on: false }; drawPlayer(); return; }
+  AU.id = id; AU.loading = true; AU.err = null; AU.plays = 0; drawPlayer();
   try { const b = await audioBlob(id); if (AU.id !== id) return; AU.url = URL.createObjectURL(b); AU.el = new Audio(AU.url); AU.el.playbackRate = AU.rate; AU.el.preload = 'auto';
     ['play', 'pause', 'ended', 'timeupdate', 'loadedmetadata'].forEach(ev => AU.el.addEventListener(ev, () => { if (ev === 'play' && AU.el.currentTime < 0.5) AU.plays++; drawPlayer(); }));
   } catch (e) { AU.err = e.message; }
   AU.loading = false; drawPlayer();
 }
-function audioStop() { if (AU.el) { try { AU.el.pause(); } catch (e) { } } if (AU.url) URL.revokeObjectURL(AU.url); AU.el = null; AU.url = null; AU.id = null; }
+function audioStop() { ttsStop(); AU.tts = null; if (AU.el) { try { AU.el.pause(); } catch (e) { } } if (AU.url) URL.revokeObjectURL(AU.url); AU.el = null; AU.url = null; AU.id = null; }
 function playerHTML() { return `<div id="player" class="player" aria-live="polite"></div>`; }
 function drawPlayer() {
   const el = $('#player'); if (!el) return;
   if (AU.loading) { el.innerHTML = '<span class="muted">Đang tải file nghe…</span>'; return; }
   if (AU.err) { el.innerHTML = `<span class="bad-t">${esc(AU.err)}</span>`; return; }
+  if (AU.tts) { el.innerHTML = `<button class="btn pri play" data-a="auToggle" aria-label="${AU.tts.on ? 'Dừng' : 'Phát'}">${AU.tts.on ? '■' : '▶'}</button>
+    <div class="ptrack"><i style="width:${AU.tts.q.length ? AU.tts.i / AU.tts.q.length * 100 : 0}%"></i></div>
+    <select data-a="auRate" aria-label="Tốc độ">${[0.85, 1, 1.15].map(r => `<option value="${r}" ${AU.rate === r ? 'selected' : ''}>${r}×</option>`).join('')}</select>
+    <span class="muted plays">nghe ${AU.plays} lần · giọng đọc máy</span>`; return; }
   if (!AU.el) { el.innerHTML = ''; return; }
   const a = AU.el, d = a.duration || 0, t = a.currentTime || 0;
   el.innerHTML = `<button class="btn pri play" data-a="auToggle" aria-label="${a.paused ? 'Phát' : 'Tạm dừng'}">${a.paused ? '▶' : '❚❚'}</button>
@@ -881,7 +973,7 @@ function drawPlayer() {
     <span class="muted plays">nghe ${AU.plays} lần</span>`;
 }
 Object.assign(ACT, {
-  auToggle() { if (!AU.el) return; if (AU.el.paused) AU.el.play().catch(() => toast('Bấm lại để phát')); else AU.el.pause(); },
+  auToggle() { if (AU.tts) { AU.tts.on ? ttsStop() : ttsPlay(); return; } if (!AU.el) return; if (AU.el.paused) AU.el.play().catch(() => toast('Bấm lại để phát')); else AU.el.pause(); },
   auBack() { if (AU.el) AU.el.currentTime = Math.max(0, AU.el.currentTime - 5); },
   auSeek(t, e) { if (!AU.el || !AU.el.duration) return; const r = t.getBoundingClientRect(); AU.el.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * AU.el.duration; },
   auRate(t) { AU.rate = +t.value; if (AU.el) AU.el.playbackRate = AU.rate; },
@@ -891,7 +983,47 @@ addEventListener('keydown', e => {
   if (e.code === 'Space' && AU.el && (route === 'listen' || route === 'drill')) { e.preventDefault(); ACT.auToggle(); }
 });
 
+/* ----- Bài tự soạn (N3–N5): đọc script bằng giọng máy của trình duyệt, đổi cao độ theo vai nam/nữ ----- */
+function ttsLines(it) {
+  const md = SET[it.set] ? SET[it.set].md : 0, def = MDL()[md] || {}, out = [];
+  String(it.script || '').split('\n').map(l => l.trim()).filter(Boolean).forEach(l => { const m = l.match(/^(男|女|男の人|女の人|M|F)[：:]\s*(.+)$/); out.push(m ? { who: /男|M/.test(m[1]) ? 'm' : 'f', t: m[2] } : { who: '', t: l }); });
+  const o = itemOpts(it, 0);
+  if (def.opts === 'spoken' && o) { if (it.q && !String(it.script || '').includes(it.q)) out.push({ who: '', t: it.q, gap: 500 }); const w = (out[out.length - 1] || {}).who === 'm' ? 'f' : (out.filter(x => x.who).length ? 'm' : 'f'); o.forEach((x, j) => { out.push({ who: '', t: String(j + 1), gap: 450 }); out.push({ who: def.ja === '概要理解' ? '' : w, t: x }); }); }
+  else if (it.q) out.push({ who: '', t: it.q, gap: 700 });
+  return out;
+}
+function ttsVoice(who) {
+  let vs = []; try { vs = speechSynthesis.getVoices().filter(v => /^ja/i.test(v.lang)); } catch (e) { }
+  const male = vs.find(v => /Ichiro|Keita|Otoya|Daichi|Naoki|男/i.test(v.name)), fem = vs.find(v => /Haruka|Ayumi|Nanami|Kyoko|Sayaka|O-?ren|女/i.test(v.name)) || vs[0];
+  if (who === 'm') return { v: male || fem, pitch: male ? 1 : 0.7 };
+  if (who === 'f') return { v: fem, pitch: male ? 1 : 1.25 };
+  return { v: vs.find(v => /Google/i.test(v.name)) || fem, pitch: 1 };
+}
+function ttsStop() { if (AU.tts) AU.tts.on = false; clearTimeout(ttsStop.h); try { speechSynthesis.cancel(); } catch (e) { } drawPlayer(); }
+function ttsPlay() {
+  const T = AU.tts; if (!T) return; if (!('speechSynthesis' in window)) { AU.err = 'Trình duyệt này không có giọng đọc tiếng Nhật.'; AU.tts = null; drawPlayer(); return; }
+  try { speechSynthesis.cancel(); } catch (e) { } T.i = 0; T.on = true; AU.plays++; const id = AU.id;
+  const step = () => {
+    if (AU.tts !== T || !T.on || AU.id !== id) return;
+    if (T.i >= T.q.length) { T.on = false; drawPlayer(); return; }
+    const x = T.q[T.i], u = new SpeechSynthesisUtterance(x.t), vc = ttsVoice(x.who);
+    u.lang = 'ja-JP'; if (vc.v) u.voice = vc.v; u.pitch = vc.pitch; u.rate = 0.95 * AU.rate;
+    u.onend = u.onerror = () => { if (AU.tts !== T || !T.on) return; T.i++; drawPlayer(); ttsStop.h = setTimeout(step, (T.q[T.i] && T.q[T.i].gap) || 320); };
+    speechSynthesis.speak(u); drawPlayer();
+  };
+  step();
+}
+try { speechSynthesis.getVoices(); } catch (e) { }
+
 const exAsset = (id, k) => 'x' + id + '-' + k;
+/* File của một đề: N2 là 1 PDF + 1 MP3; đề chính thức N3–N5 là nhiều PDF (theo bài thi) và MP3 theo từng 問題 */
+function exFiles(e) {
+  const out = [];
+  if (Array.isArray(e.pdf)) e.pdf.forEach((rel, i) => out.push(['p' + i, rel, 'application/pdf'])); else out.push(['p', e.pdf, 'application/pdf']);
+  if (e.script) out.push(['s', e.script, 'application/pdf']);
+  if (Array.isArray(e.mp3)) e.mp3.forEach((rel, i) => out.push(['a' + (i + 1), rel, 'audio/mpeg'])); else out.push(['a', e.mp3, 'audio/mpeg']);
+  return out;
+}
 let MTOK = null;
 async function mediaUrl(id) {
   if (!MTOK || MTOK.exp - Date.now() < 600000) MTOK = await CF.call('/media-token', { method: 'POST' });
@@ -904,26 +1036,31 @@ async function importFolder(files) {
   if (!CF.cfg) { toast('Bật đồng bộ trước (mục Đồng bộ bên dưới)'); return; }
   files = [...files]; IMP = { busy: true, msg: 'Đang đọc thư mục…', done: 0, total: 0, skip: 0, fail: [], have: IMP.have }; render();
   try {
-    const jf = files.find(f => /content-n2\.json$/i.test(f.name));
-    let content = C;
-    if (jf) {
-      const txt = await jf.text(); content = JSON.parse(txt);
-      if (!content.sets) throw new Error('File content-n2.json không đúng định dạng');
+    const jfs = files.filter(f => /^content-[a-z0-9]+\.json$/i.test(f.name));
+    const contents = [];
+    for (const jf of jfs) {
+      const txt = await jf.text(), content = JSON.parse(txt);
+      if (!content.sets) throw new Error('File ' + jf.name + ' không đúng định dạng');
+      const slot = SLOTS.includes(content.slot) ? content.slot : 'main';
       IMP.msg = 'Đang tải nội dung bài tập lên…'; render();
-      await CF.call('/content', { method: 'PUT', body: { data: txt } });
-      await fetchContent(true);
+      await CF.call('/content' + (slot === 'main' ? '' : '?slot=' + slot), { method: 'PUT', body: { data: txt } });
+      contents.push(content);
     }
-    if (!content) throw new Error('Không thấy file content-n2.json trong thư mục đã chọn.');
+    if (jfs.length) await fetchContent(true);
+    else if (allSets().length || allExams().length) contents.push({ sets: allSets(), exams: allExams() });
+    if (!contents.length) throw new Error('Không thấy file content-*.json trong thư mục đã chọn.');
     const norm = s => s.normalize('NFC').replace(/\\/g, '/').toLowerCase();
     const byPath = files.map(f => [norm(f.webkitRelativePath || f.name), f]);
     const jobs = [];
-    const find = rel => { const want = norm(rel); const hit = byPath.find(([p]) => p.endsWith(want)); return hit && hit[1]; };
-    content.sets.forEach(s => s.items.forEach(it => { if (!it.audio) return; const f = find(it.audio); if (f) jobs.push([it.id, f, 'audio/mpeg']); }));
-    (content.exams || []).forEach(e => [['p', e.pdf, 'application/pdf'], ['s', e.script, 'application/pdf'], ['a', e.mp3, 'audio/mpeg']].forEach(([k, rel, type]) => { const f = find(rel); if (f) jobs.push([exAsset(e.id, k), f, type]); }));
+    const find = rel => { if (!rel) return null; const want = norm(rel); const hit = byPath.find(([p]) => p.endsWith(want)); return hit && hit[1]; };
+    contents.forEach(content => {
+      content.sets.forEach(s => s.items.forEach(it => { if (!it.audio) return; const f = find(it.audio); if (f) jobs.push([it.id, f, 'audio/mpeg']); }));
+      (content.exams || []).forEach(e => exFiles(e).forEach(([k, rel, type]) => { const f = find(rel); if (f) jobs.push([exAsset(e.id, k), f, type]); }));
+    });
     await audioHave();
     const todo = jobs.filter(([id]) => !(IMP.have && IMP.have.has(id)));
     IMP.total = jobs.length; IMP.skip = jobs.length - todo.length;
-    if (!jobs.length) IMP.msg = 'Không thấy file khớp. Hãy chọn thư mục "2.DMR-TÀI LIỆU HỌC VIÊN" hoặc "N2_ĐỀ CÁC NĂM".';
+    if (!jobs.length) IMP.msg = 'Không thấy file khớp. Hãy chọn đúng thư mục tài liệu (xem danh sách bên dưới).';
     let i = 0;
     const worker = async () => { // 2 luồng song song
       while (i < todo.length) {
@@ -942,16 +1079,19 @@ async function importFolder(files) {
   IMP.busy = false; render();
 }
 function importUI() {
-  const nItems = C ? C.sets.reduce((a, s) => a + s.items.length, 0) : 0, nAudio = C ? C.sets.reduce((a, s) => a + s.items.filter(i => i.audio).length, 0) : 0;
-  const nEx = C && C.exams ? C.exams.length : 0, exHave = nEx && IMP.have ? C.exams.filter(e => ['p', 's', 'a'].every(k => IMP.have.has(exAsset(e.id, k)))).length : 0;
+  const S0 = allSets(), E0 = allExams(), any = S0.length || E0.length;
+  const nItems = S0.reduce((a, s) => a + s.items.length, 0), nAudio = S0.reduce((a, s) => a + s.items.filter(i => i.audio).length, 0);
+  const nEx = E0.length, exHave = nEx && IMP.have ? E0.filter(e => exFiles(e).every(([k]) => IMP.have.has(exAsset(e.id, k)))).length : 0;
+  const byLv = LVS.map(l => { const n = S0.filter(s => lvOf(s) === l).reduce((a, s) => a + s.items.length, 0), x = E0.filter(e => lvOf(e) === l).length; return n || x ? `${l}: ${n} câu luyện, ${x} đề` : ''; }).filter(Boolean).join(' · ');
   return `<div class="gist">
-    <p><b>Tài liệu khóa học</b> ${C ? `<span class="tag on">${nItems} câu · ${nAudio} file nghe${nEx ? ` · ${nEx} đề thi` : ''}</span>` : '<span class="tag">chưa có</span>'}</p>
+    <p><b>Tài liệu</b> ${any ? `<span class="tag on">${nItems} câu · ${nAudio} file nghe${nEx ? ` · ${nEx} đề thi` : ''}</span>` : '<span class="tag">chưa có</span>'}</p>
+    ${byLv ? `<p class="hint">${byLv}</p>` : ''}
     <p class="hint">Nội dung và file nghe được lưu riêng trên máy chủ của bạn (D1/R2), chỉ máy đã ghép mới tải được; không nằm trên GitHub.</p>
-    ${CF.cfg ? `<label class="btn ${C ? '' : 'pri'}" ${IMP.busy ? 'aria-disabled="true"' : ''}>Chọn thư mục khóa học…<input type="file" id="impdir" webkitdirectory directory multiple hidden data-a="impPick" ${IMP.busy ? 'disabled' : ''}></label>
-    <p class="hint">Trên laptop, chọn lần lượt thư mục <b>2.DMR-TÀI LIỆU HỌC VIÊN</b> và <b>N2_ĐỀ CÁC NĂM</b> (mỗi thư mục đều có file content-n2.json). File đã tải lên sẽ được bỏ qua.</p>` : '<p class="hint">Bật đồng bộ trước rồi mới nhập được.</p>'}
+    ${CF.cfg ? `<label class="btn ${any ? '' : 'pri'}" ${IMP.busy ? 'aria-disabled="true"' : ''}>Chọn thư mục tài liệu…<input type="file" id="impdir" webkitdirectory directory multiple hidden data-a="impPick" ${IMP.busy ? 'disabled' : ''}></label>
+    <p class="hint">Trên laptop, chọn lần lượt từng thư mục: <b>2.DMR-TÀI LIỆU HỌC VIÊN</b>, <b>N2_ĐỀ CÁC NĂM</b> (N2) và <b>JLPT_CHINH_THUC_N3-N5</b> (N3–N5). Mỗi thư mục có sẵn file content-….json. File đã tải lên sẽ được bỏ qua.</p>` : '<p class="hint">Bật đồng bộ trước rồi mới nhập được.</p>'}
     ${IMP.have ? `<p class="hint">Trên máy chủ: ${[...IMP.have].filter(x => x[0] !== 'x').length}/${nAudio} file nghe bài tập${nEx ? ` · ${exHave}/${nEx} đề đủ file (đề + script + nghe)` : ''}.</p>` : ''}
     ${IMP.msg ? `<p id="impmsg" class="${IMP.msg.startsWith('Lỗi') ? 'bad-t' : ''}">${esc(IMP.msg)}</p>` : ''}
-    ${C && CF.cfg ? '<div class="row"><button class="btn ghost sm" data-a="contentRefresh">Tải lại nội dung từ máy chủ</button><button class="btn ghost sm" data-a="audioClear">Xóa file nghe đã lưu tạm trên máy này</button></div>' : ''}
+    ${any && CF.cfg ? '<div class="row"><button class="btn ghost sm" data-a="contentRefresh">Tải lại nội dung từ máy chủ</button><button class="btn ghost sm" data-a="audioClear">Xóa file nghe đã lưu tạm trên máy này</button></div>' : ''}
   </div>`;
 }
 Object.assign(ACT, {
@@ -1027,28 +1167,29 @@ function startListen(ids, label) {
   if (route !== 'listen') go('listen'); else render();
 }
 function lpItem() { return ITEM[LP.ids[LP.i]]; }
-function listenOptsVisible(it) { const md = SET[it.set].md; return LP.showOpts || md === 1 || md === 2 || LP.shown; }
+function listenOptsVisible(it) { const md = SET[it.set].md; return LP.showOpts || (MDL()[md] || {}).opts === 'print' || LP.shown; }
 VIEWS.listen = () => {
   if (!C) return noContent();
   if (LP && !LP.done) return lpView();
   if (LP && LP.done) return lpSummary();
-  const sets = C.sets.filter(s => s.kind === 'L' && (LPICK.tab === 'all' || s.src === (LPICK.tab === 'c2' ? 'c2-' : 'f-')) && (!LPICK.md || s.md === LPICK.md));
+  const n2 = curLv() === 'N2', mds = Object.keys(MDL()).map(Number); if (!mds.includes(LPICK.md)) LPICK.md = 0;
+  const sets = C.sets.filter(s => s.kind === 'L' && (!n2 || LPICK.tab === 'all' || s.src === (LPICK.tab === 'c2' ? 'c2-' : 'f-')) && (!LPICK.md || s.md === LPICK.md));
   const wd = weakDue('L');
   return `<h1 class="pt">Luyện nghe <span lang="ja">聴解</span></h1>
   ${wd.length ? `<section class="panel ptnudge"><span><b>${wd.length} câu nghe sai</b> đến hạn làm lại.</span><button class="btn pri" data-a="lpWeak">Làm lại câu sai</button></section>` : ''}
   <section class="panel">
-    <div class="ph"><div class="seg">${[['c2', 'Chặng 2 (luyện đề)'], ['f', 'Nền tảng'], ['all', 'Tất cả']].map(([k, v]) => `<button class="${LPICK.tab === k ? 'on' : ''}" data-a="lpTab" data-v="${k}">${v}</button>`).join('')}</div>
-    <div class="chips">${[0, 1, 2, 3, 4, 5].map(m => `<button class="chip${LPICK.md === m ? ' on' : ''}" data-a="lpMd" data-v="${m}">${m ? '問題' + m : 'Mọi dạng'}</button>`).join('')}</div></div>
-    <div class="sets">${sets.map(s => setCard(s)).join('') || '<p class="muted">Không có bộ nào.</p>'}</div>
+    <div class="ph">${n2 ? `<div class="seg">${[['c2', 'Chặng 2 (luyện đề)'], ['f', 'Nền tảng'], ['all', 'Tất cả']].map(([k, v]) => `<button class="${LPICK.tab === k ? 'on' : ''}" data-a="lpTab" data-v="${k}">${v}</button>`).join('')}</div>` : `<h2>Bộ luyện ${curLv()}</h2>`}
+    <div class="chips">${[0, ...mds].map(m => `<button class="chip${LPICK.md === m ? ' on' : ''}" data-a="lpMd" data-v="${m}">${m ? '問題' + m : 'Mọi dạng'}</button>`).join('')}</div></div>
+    <div class="sets">${sets.map(s => setCard(s)).join('') || `<p class="muted">Chưa có bộ luyện nghe cho ${curLv()}. Vào Thi thử để luyện từng 問題 bằng đề.</p>`}</div>
   </section>
   <section class="panel"><div class="ph"><h2>Luyện theo dạng (trộn các bộ)</h2></div>
-    <div class="mdgrid">${[1, 2, 3, 4, 5].map(m => { const ids = C.sets.filter(s => s.kind === 'L' && s.md === m).flatMap(s => s.items.map(i => i.id)); const st = typeStats('L' + m); return `<div class="mdc"><b lang="ja">問題${m} ${MD[m].ja}</b><span class="muted">${MD[m].vi} · ${ids.length} câu</span>${st.done ? `<span class="num">${st.lastPct}% đúng (gần nhất)</span>` : '<span class="muted">chưa làm</span>'}<button class="btn sm" data-a="lpType" data-v="${m}">10 câu</button></div>`; }).join('')}</div>
-    <label class="check"><input type="checkbox" data-a="setShowOpts" ${S.set.showOpts ? 'checked' : ''}><span>Hiện chữ lựa chọn cho dạng 3, 4, 5 (đề thật chỉ đọc, không in)</span></label>
+    <div class="mdgrid">${mds.map(m => { const ids = C.sets.filter(s => s.kind === 'L' && s.md === m).flatMap(s => s.items.map(i => i.id)); const st = typeStats('L' + m); return `<div class="mdc"><b lang="ja">問題${m} ${MDL()[m].ja}</b><span class="muted">${MDL()[m].vi} · ${ids.length} câu</span>${st.done ? `<span class="num">${st.lastPct}% đúng (gần nhất)</span>` : '<span class="muted">chưa làm</span>'}<button class="btn sm" data-a="lpType" data-v="${m}" ${ids.length ? '' : 'disabled'}>10 câu</button></div>`; }).join('')}</div>
+    <label class="check"><input type="checkbox" data-a="setShowOpts" ${S.set.showOpts ? 'checked' : ''}><span>Hiện chữ lựa chọn cho các dạng chỉ đọc lựa chọn (đề thật không in chữ)</span></label>
   </section>`;
 };
 function setCard(s) {
   const n = s.items.length, done = s.items.filter(i => attempts(i.id).length).length, ok = s.items.filter(i => { const a = attempts(i.id); return a.length && a[a.length - 1][2]; }).length;
-  const st = s.kind === 'L' ? `問題${s.md} ${MD[s.md].ja}` : [...new Set(s.passages.map(p => p.type))].join(' · ');
+  const st = s.kind === 'L' ? `問題${s.md} ${MDL()[s.md].ja}` : [...new Set(s.passages.map(p => p.type))].join(' · ');
   return `<div class="dk"><div class="dk-h"><b>${esc(setTitle(s))}</b><span class="tag" lang="ja">${esc(st)}</span></div>
     <div class="dk-bar"><i class="m" style="width:${pct(ok, n)}%"></i><i class="s" style="width:${pct(done - ok, n)}%"></i></div>
     <div class="dk-f"><span class="num">${done ? `${ok}/${n} đúng` : `${n} câu`}</span><button class="btn sm ${done ? '' : 'pri'}" data-a="${s.kind === 'L' ? 'lpSet' : 'rpSet'}" data-v="${s.id}">${done ? 'Làm lại' : 'Bắt đầu'}</button></div></div>`;
@@ -1065,11 +1206,11 @@ function lpView() {
       }).join('')}</div></div>`;
   }).join('');
   const showQ = LP.shown || LP.showOpts;
-  return `<div class="rv-top"><button class="btn ghost sm" data-a="lpQuit">Thoát</button><span class="muted">${esc(setTitle(s))} · <span lang="ja">問題${md} ${MD[md].ja}</span></span><span class="num muted">${LP.i + 1}/${LP.ids.length}</span></div>
+  return `<div class="rv-top"><button class="btn ghost sm" data-a="lpQuit">Thoát</button><span class="muted">${esc(setTitle(s))} · <span lang="ja">問題${md} ${MDL()[md].ja}</span></span><span class="num muted">${LP.i + 1}/${LP.ids.length}</span></div>
   <div class="rv-prog"><i style="width:${LP.i / LP.ids.length * 100}%"></i></div>
   <section class="panel lpanel">
     <div class="ph"><h2>Câu ${it.n}</h2><button class="btn ghost sm" data-a="lpTip">Mẹo dạng này</button></div>
-    ${LP.tip ? `<p class="tipbox">${esc(MD[md].tip)}</p>` : ''}
+    ${LP.tip ? `<p class="tipbox">${esc(MDL()[md].tip)}</p>` : ''}
     ${playerHTML()}
     ${showQ && it.q ? `<p class="lqtext" lang="ja">${esc(it.q)}</p>` : ''}
     ${it.img ? `<img class="optimg" src="${it.img}" alt="Lựa chọn dạng hình">` : ''}
@@ -1081,12 +1222,13 @@ function lpView() {
 function lpReveal(it) {
   const ok = okPick(it, LP.picks);
   return `<div class="expl ${ok ? 'good' : 'bad'}"><b>${ok ? 'Đúng' : 'Sai'}</b> · đáp án ${it.ans.map(a => CIRC[a - 1]).join(' / ')}${ok ? '' : ' · bạn chọn ' + LP.picks.map(a => CIRC[a - 1]).join(' / ')}</div>
+    ${it.ex ? `<p class="exnote">${esc(it.ex)}</p>` : ''}
     ${whyChips(it.id)}
     <details class="scriptd" open><summary><b>Script</b> <span class="hint">câu tô màu là chỗ chứa đáp án</span></summary>${scriptHTML(it, it.id)}</details>
     ${phraseBox(it.id)}
     <div class="row"><button class="btn" data-a="auReplay">Nghe lại từ đầu</button><button class="btn pri" data-a="lpNext">${LP.i + 1 < LP.ids.length ? 'Câu tiếp (Enter)' : 'Xem kết quả'}</button></div>`;
 }
-AFTER.listen = () => { if (LP && !LP.done) { const it = lpItem(); if (AU.id !== it.id) audioLoad(it.id).then(() => { if (AU.el && LP && lpItem().id === it.id && !LP.shown) AU.el.play().catch(() => { }); }); else drawPlayer(); } };
+AFTER.listen = () => { if (LP && !LP.done) { const it = lpItem(); if (AU.id !== it.id) audioLoad(it.id).then(() => { if (!LP || lpItem().id !== it.id || LP.shown) return; if (AU.tts) ttsPlay(); else if (AU.el) AU.el.play().catch(() => { }); }); else drawPlayer(); } };
 function lpCheck() {
   const it = lpItem(); if (LP.picks.filter(Boolean).length < it.ans.length) { render(); return; }
   const ok = okPick(it, LP.picks); rec(it.id, LP.picks, ok, (Date.now() - LP.t0) / 1000, AU.id === it.id ? AU.plays : 0);
@@ -1106,7 +1248,7 @@ Object.assign(ACT, {
   lpQuit() { audioStop(); LP = LP.res.length ? { ...LP, done: true } : null; render(); },
   lpAgain() { const wrong = LP.res.filter(r => !r[1]).map(r => r[0]); startListen(wrong, 'Làm lại câu sai'); },
   lpClose() { LP = null; render(); },
-  auReplay() { if (AU.el) { AU.el.currentTime = 0; AU.el.play().catch(() => { }); } },
+  auReplay() { if (AU.tts) { ttsPlay(); return; } if (AU.el) { AU.el.currentTime = 0; AU.el.play().catch(() => { }); } },
   setShowOpts(t) { S.set.showOpts = t.checked; save(); },
 });
 function lpAdvance() { audioStop(); if (LP.i + 1 >= LP.ids.length) { LP.done = true; render(); return; } LP.i++; LP.picks = []; LP.shown = false; LP.t0 = Date.now(); LP.tip = false; render(); scrollTo(0, 0); }
@@ -1140,31 +1282,31 @@ VIEWS.read = () => {
   if (RP && !RP.done) return rpView();
   if (RP && RP.done) return rpSummary();
   const sets = C.sets.filter(s => s.kind === 'R'), wd = weakDue('R');
-  const types = Object.keys(RT);
+  const types = Object.keys(RTL());
   return `<h1 class="pt">Luyện đọc <span lang="ja">読解</span></h1>
   ${wd.length ? `<section class="panel ptnudge"><span><b>${wd.length} câu đọc sai</b> đến hạn làm lại.</span><button class="btn pri" data-a="rpWeak">Làm lại câu sai</button></section>` : ''}
   <section class="panel"><div class="ph"><h2>Theo dạng</h2></div>
-    <div class="mdgrid">${types.map(t => { const ps = Object.values(PASS).filter(p => p.type === t), st = typeStats('R' + t); return ps.length ? `<div class="mdc"><b lang="ja">${t}</b><span class="muted">${RT[t].vi} · ${ps.length} bài · ~${RT[t].min}′/bài</span>${st.done ? `<span class="num">${st.lastPct}% đúng · ${st.avgPass ? Math.round(st.avgPass / 60 * 10) / 10 + '′/bài' : ''}</span>` : '<span class="muted">chưa làm</span>'}<button class="btn sm" data-a="rpType" data-v="${t}">3 bài</button></div>` : ''; }).join('')}</div></section>
-  <section class="panel"><div class="ph"><h2>Theo bài</h2></div><div class="sets">${sets.map(setCard).join('')}</div></section>`;
+    <div class="mdgrid">${types.map(t => { const ps = Object.values(PASS).filter(p => p.type === t), st = typeStats('R' + t); return ps.length ? `<div class="mdc"><b lang="ja">${t}</b><span class="muted">${RTL()[t].vi} · ${ps.length} bài · ~${RTL()[t].min}′/bài</span>${st.done ? `<span class="num">${st.lastPct}% đúng · ${st.avgPass ? Math.round(st.avgPass / 60 * 10) / 10 + '′/bài' : ''}</span>` : '<span class="muted">chưa làm</span>'}<button class="btn sm" data-a="rpType" data-v="${t}">3 bài</button></div>` : ''; }).join('')}</div></section>
+  <section class="panel"><div class="ph"><h2>Theo bài</h2></div><div class="sets">${sets.map(setCard).join('') || `<p class="muted">Chưa có bài đọc cho ${curLv()}.</p>`}</div></section>`;
 };
 function rpView() {
-  const p = PASS[RP.pids[RP.i]], items = passItems(p.pid), el = (Date.now() - RP.t0) / 1000, tgt = RT[p.type].min * 60;
+  const p = PASS[RP.pids[RP.i]], items = passItems(p.pid), el = (Date.now() - RP.t0) / 1000, tgt = RTL()[p.type].min * 60;
   const qh = items.map((it, k) => {
     const o = itemOpts(it, 0) || [];
     return `<div class="rq"><p class="rqq" lang="ja"><b>${items.length > 1 ? '問' + (k + 1) + ' ' : ''}</b>${esc(it.q)}</p><div class="opts one">${o.map((x, j) => {
       const v = j + 1, picked = RP.picks[it.id] === v, cls = RP.shown ? (v === it.ans[0] ? ' right' : picked ? ' wrongp' : ' dim') : picked ? ' sel' : '';
       return `<button class="opt${cls}" data-a="rpPick" data-id="${it.id}" data-v="${v}" ${RP.shown ? 'disabled' : ''}><span class="ok-n">${v}</span><span lang="ja">${esc(x)}</span></button>`;
-    }).join('')}</div>${RP.shown ? whyChips(it.id) : ''}</div>`;
+    }).join('')}</div>${RP.shown && it.ex ? `<p class="exnote">${esc(it.ex)}</p>` : ''}${RP.shown ? whyChips(it.id) : ''}</div>`;
   }).join('');
   const all = items.every(it => RP.picks[it.id]);
   return `<div class="rv-top"><button class="btn ghost sm" data-a="rpQuit">Thoát</button><span class="muted">${esc(SET[items[0].set] ? setTitle(SET[items[0].set]) : '')} · <span lang="ja">${p.type}</span></span><span class="num muted">${RP.i + 1}/${RP.pids.length}</span></div>
   <div class="rv-prog"><i style="width:${RP.i / RP.pids.length * 100}%"></i></div>
   <div class="rgrid">
-    <section class="panel"><div class="ph"><h2 lang="ja">${p.type}</h2><span id="rtimer" class="num ${el > tgt ? 'late' : ''}" data-tgt="${tgt}">${mmss(el)} / ${RT[p.type].min}:00</span></div>
+    <section class="panel"><div class="ph"><h2 lang="ja">${p.type}</h2><span id="rtimer" class="num ${el > tgt ? 'late' : ''}" data-tgt="${tgt}">${mmss(el)} / ${RTL()[p.type].min}:00</span></div>
       ${passageHTML(p)}
       ${RP.shown ? phraseBox(p.pid) : ''}</section>
     <section class="panel rqs">${qh}
-      ${RP.shown ? `<div class="expl ${RP.lastOk === items.length ? 'good' : 'bad'}"><b>${RP.lastOk}/${items.length} đúng</b> · ${mmss(RP.lastSec)} (mục tiêu ${RT[p.type].min}′)</div><p class="hint">${esc(RT[p.type].tip)}</p><button class="btn pri" data-a="rpNext">${RP.i + 1 < RP.pids.length ? 'Bài tiếp (Enter)' : 'Xem kết quả'}</button>`
+      ${RP.shown ? `<div class="expl ${RP.lastOk === items.length ? 'good' : 'bad'}"><b>${RP.lastOk}/${items.length} đúng</b> · ${mmss(RP.lastSec)} (mục tiêu ${RTL()[p.type].min}′)</div><p class="hint">${esc(RTL()[p.type].tip)}</p><button class="btn pri" data-a="rpNext">${RP.i + 1 < RP.pids.length ? 'Bài tiếp (Enter)' : 'Xem kết quả'}</button>`
       : `<button class="btn pri" data-a="rpSubmit" ${all ? '' : 'disabled'}>Nộp bài</button>`}
     </section></div>`;
 }
@@ -1200,8 +1342,8 @@ function passageHTML(p, open) {
 }
 function noContent() {
   const pc = devMode() === 'pc';
-  return `<section class="panel"><h2>Chưa có tài liệu bài tập</h2>
-    <p>${CF.cfg ? (pc ? 'Vào Cài đặt → Tài liệu khóa học → chọn thư mục khóa học để tải nội dung và file nghe lên (làm một lần).' : 'Nhập tài liệu trên laptop một lần (Cài đặt → Tài liệu khóa học); điện thoại sẽ tự tải về khi đồng bộ.') : 'Bật đồng bộ ở mục Cài đặt trước, rồi nhập tài liệu trên laptop.'}</p>
+  return `<section class="panel"><h2>Chưa có tài liệu ${curLv()}</h2>${lvSwitchHTML()}
+    <p>${CF.cfg ? (pc ? 'Vào Cài đặt → Tài liệu khóa học → chọn thư mục tài liệu của cấp này để tải nội dung và file nghe lên (làm một lần).' : 'Nhập tài liệu trên laptop một lần (Cài đặt → Tài liệu khóa học); điện thoại sẽ tự tải về khi đồng bộ.') : 'Bật đồng bộ ở mục Cài đặt trước, rồi nhập tài liệu trên laptop.'}</p>
     <div class="row"><a class="btn pri" href="#plan">Mở Cài đặt</a>${CF.cfg ? '<button class="btn" data-a="contentRefresh">Kiểm tra lại</button>' : ''}</div></section>`;
 }
 /* ===== PHÂN TÍCH ĐIỂM YẾU ===== */
@@ -1216,24 +1358,25 @@ function typeStats(t) {
   const nPass = t[0] === 'R' ? new Set(its.map(i => i.pid)).size : 0;
   return { t, total: its.length, done: done.length, lastPct: pct(lastOk, done.length), firstPct: pct(firstOk, done.length), avg, avgPass: nPass ? avg * its.length / nPass : 0, weak: done.filter(i => ist(i.id).weak).length, topWhy: topWhy ? topWhy[0] : null, why };
 }
-const ALL_TYPES = () => [...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(m => 'K' + m), ...Object.keys(RT).map(t => 'R' + t), ...[1, 2, 3, 4, 5].map(m => 'L' + m)].filter(t => typeItems(t).length);
+const ALL_TYPES = () => [...PARTS().filter(p => p.sec === 'K').map(p => 'K' + p.md), ...Object.keys(RTL()).map(t => 'R' + t), ...Object.keys(MDL()).map(m => 'L' + m)].filter(t => typeItems(t).length);
 const lvlCls = p => p >= 75 ? 'good' : p >= 60 ? 'warn' : 'bad';
 function typeAct(t) {
-  if (t[0] === 'K') return { a: 'exTypePick', v: '0:' + t[1] };
+  if (t[0] === 'K') return { a: 'exTypePick', v: '0:' + t.slice(1) };
   if (t[0] === 'L') return typeItems(t).some(i => i.kind === 'L') ? { a: 'lpType', v: t[1] } : { a: 'exTypePick', v: '1:' + t[1] };
+  if (!typeItems(t).some(i => i.kind === 'R')) { const p = PARTS().find(x => x.rt === t.slice(1)); if (p) return { a: 'exTypePick', v: '0:' + p.md }; }
   return { a: 'rpType', v: t.slice(1) };
 }
 function advice() {
   const st = ALL_TYPES().map(typeStats).filter(s => s.done >= 3).sort((a, b) => a.lastPct - b.lastPct);
   const out = [], wd = weakDue();
   if (wd.length) out.push({ h: `Làm lại ${wd.length} câu sai đến hạn`, p: 'Câu sai được lặp lại 1 → 3 → 7 → 21 ngày; đúng 3 lần liền thì ra khỏi danh sách yếu.', a: 'weakGo', l: 'Làm lại' });
-  if (st[0] && st[0].lastPct < 75) { const w = st[0]; out.push({ h: `Dạng yếu nhất: ${typeVi(w.t)} (${w.lastPct}%)`, p: (w.t[0] === 'L' ? MD[w.t[1]].tip : w.t[0] === 'K' ? 'Luyện thêm 問題 này từ đề các năm; sai từ/ngữ pháp nào thì ôn lại bằng app/sách.' : RT[w.t.slice(1)].tip), ...typeAct(w.t), l: 'Luyện dạng này' }); }
+  if (st[0] && st[0].lastPct < 75) { const w = st[0]; out.push({ h: `Dạng yếu nhất: ${typeVi(w.t)} (${w.lastPct}%)`, p: (w.t[0] === 'L' ? MDL()[w.t[1]].tip : w.t[0] === 'K' ? 'Luyện thêm 問題 này từ đề các năm; sai từ/ngữ pháp nào thì ôn lại bằng app/sách.' : RTL()[w.t.slice(1)].tip), ...typeAct(w.t), l: 'Luyện dạng này' }); }
   const why = {}; ALL_TYPES().forEach(t => Object.entries(typeStats(t).why).forEach(([k, n]) => { why[k] = (why[k] || 0) + n; }));
   const top = Object.entries(why).sort((a, b) => b[1] - a[1])[0];
   const TIP = { nghe: 'Nghe lại câu sai ở 0.85×, nhìn script, rồi nghe lại không script (shadowing 2–3 lần).', tu: 'Bôi đen từ chưa biết trong script/bài đọc và lưu thành thẻ; ôn trên điện thoại mỗi ngày.', bay: 'Khi nghe, chú ý câu sau でも/ただ/やっぱり/実は; ghi ○✕ cho từng lựa chọn đến cuối bài.', cau: 'Đọc/nghe kỹ câu hỏi: hỏi ai, hỏi lý do hay việc làm, "まず" hay "このあと".', gio: 'Đọc câu hỏi trước bài đọc; bấm giờ theo mục tiêu từng dạng, không quay lại câu khó quá 1 lần.', doan: 'Câu đoán bừa = chưa nắm; làm lại sau 1 ngày và đọc script.' };
   if (top && top[1] >= 2) out.push({ h: `Lý do sai hay gặp: ${WHY.find(w => w[0] === top[0])[1]} (${top[1]} lần)`, p: TIP[top[0]] });
-  const st2 = ALL_TYPES().map(typeStats).filter(s => s.t[0] === 'R' && s.done >= 2 && s.avgPass > RT[s.t.slice(1)].min * 60 * 1.2);
-  if (st2[0]) out.push({ h: `Đọc ${st2[0].t.slice(1)} chậm: ~${Math.round(st2[0].avgPass / 60 * 10) / 10}′/bài (mục tiêu ${RT[st2[0].t.slice(1)].min}′)`, p: RT[st2[0].t.slice(1)].tip });
+  const st2 = ALL_TYPES().map(typeStats).filter(s => s.t[0] === 'R' && s.done >= 2 && s.avgPass > RTL()[s.t.slice(1)].min * 60 * 1.2);
+  if (st2[0]) out.push({ h: `Đọc ${st2[0].t.slice(1)} chậm: ~${Math.round(st2[0].avgPass / 60 * 10) / 10}′/bài (mục tiêu ${RTL()[st2[0].t.slice(1)].min}′)`, p: RTL()[st2[0].t.slice(1)].tip });
   const untouched = ALL_TYPES().map(typeStats).filter(s => !s.done);
   if (out.length < 3 && untouched[0]) out.push({ h: `Chưa làm: ${typeVi(untouched[0].t)}`, p: 'Làm ít nhất 5 câu để có dữ liệu phân tích.', ...typeAct(untouched[0].t), l: 'Bắt đầu' });
   return out.slice(0, 4);
@@ -1303,7 +1446,7 @@ function drView() {
       ${DR.script && !DR.shown ? scriptHTML({ ...it, ans: [0] }, it.id) : ''}${it.q ? `<p class="lqtext" lang="ja">${esc(it.q)}</p>` : ''}`;
   const qs = Array.from({ length: n }, (_, k) => { const o = itemOpts(it, k); return `${n > 1 ? `<p class="lbl">質問${k + 1}</p>` : ''}<div class="opts one">${Array.from({ length: it.nopt || 4 }, (_, j) => { const v = j + 1, picked = +DR.picks[k] === v, cls = DR.shown ? (v === it.ans[k] ? ' right' : picked ? ' wrongp' : ' dim') : picked ? ' sel' : ''; return `<button class="opt${cls}" data-a="drPick" data-k="${k}" data-v="${v}" ${DR.shown ? 'disabled' : ''}><span class="ok-n">${v}</span>${o ? `<span lang="ja">${esc(o[j] || '')}</span>` : ''}</button>`; }).join('')}</div>`; }).join('');
   return top + `<section class="panel"><p class="muted">${esc(setTitle(SET[it.set]))} · <span lang="ja">${esc(typeName(it.type))}</span> · lịch sử ${attempts(it.id).map(a => a[2] ? '○' : '✕').join('')}</p>${body}${qs}
-    ${DR.shown ? `<div class="expl ${okPick(it, DR.picks) ? 'good' : 'bad'}"><b>${okPick(it, DR.picks) ? 'Đúng' : 'Sai'}</b> · đáp án ${it.ans.map(a => CIRC[a - 1]).join(' / ')}</div>${whyChips(it.id)}${it.kind === 'L' ? `<details class="scriptd"><summary><b>Script</b></summary>${scriptHTML(it, it.id)}</details>` : ''}${phraseBox(it.kind === 'L' ? it.id : it.pid)}<button class="btn pri wide" data-a="drNext">Tiếp</button>` : ''}</section>`;
+    ${DR.shown ? `<div class="expl ${okPick(it, DR.picks) ? 'good' : 'bad'}"><b>${okPick(it, DR.picks) ? 'Đúng' : 'Sai'}</b> · đáp án ${it.ans.map(a => CIRC[a - 1]).join(' / ')}</div>${it.ex ? `<p class="exnote">${esc(it.ex)}</p>` : ''}${whyChips(it.id)}${it.kind === 'L' ? `<details class="scriptd"><summary><b>Script</b></summary>${scriptHTML(it, it.id)}</details>` : ''}${phraseBox(it.kind === 'L' ? it.id : it.pid)}<button class="btn pri wide" data-a="drNext">Tiếp</button>` : ''}</section>`;
 }
 AFTER.drill = () => { if (DR && !DR.done && DR.q[DR.i] && DR.q[DR.i].k === 'i') drawPlayer(); };
 function drNext() { DR.i++; DR.shown = false; DR.picks = []; DR.script = false; DR.t0 = Date.now(); audioStop(); if (DR.i >= DR.q.length) DR.done = true; render(); scrollTo(0, 0); }
@@ -1314,7 +1457,7 @@ Object.assign(ACT, {
   drGrade(t) { const c = DR.q[DR.i], p = S.phr[c.id], g = +t.dataset.v; p.s = sched(p.s, g); DR.res.push(g > 1); save(); if (g === 1 && DR.q.filter(x => x.id === c.id).length < 3) DR.q.push(c); drNext(); },
   drPick(t) { if (DR.shown) return; DR.picks = DR.picks || []; DR.picks[+t.dataset.k] = +t.dataset.v; const it = ITEM[DR.q[DR.i].id]; if (DR.picks.filter(Boolean).length < it.ans.length) { render(); return; } const ok = okPick(it, DR.picks); rec(it.id, DR.picks, ok, (Date.now() - DR.t0) / 1000, AU.id === it.id ? AU.plays : 0); DR.res.push(ok); DR.shown = true; render(); },
   drNext() { drNext(); },
-  drAudio() { const it = ITEM[DR.q[DR.i].id]; render(); audioLoad(it.id).then(() => { render(); if (AU.el) AU.el.play().catch(() => { }); }); },
+  drAudio() { const it = ITEM[DR.q[DR.i].id]; render(); audioLoad(it.id).then(() => { render(); if (AU.tts) ttsPlay(); else if (AU.el) AU.el.play().catch(() => { }); }); },
   drScript() { DR.script = !DR.script; render(); },
   drQuit() { audioStop(); DR = DR.res.length ? { ...DR, done: true } : null; render(); },
   drClose() { DR = null; render(); },
@@ -1338,7 +1481,7 @@ VIEWS.today = () => {
     plan = `<section class="panel primary"><div class="ph"><h2>${pc ? 'Buổi luyện hôm nay (laptop)' : 'Hôm nay trên điện thoại'}</h2><span class="num muted">${m}/120 phút</span></div>
       <div class="sbar big"><i style="width:${Math.min(100, m / 120 * 100)}%"></i></div>
       ${pc ? `<div class="todo">
-        ${ls ? `<div class="adv"><div><b>Nghe: ${esc(setTitle(ls))}</b><p class="muted" lang="ja">問題${ls.md} ${MD[ls.md].ja} · ${ls.items.length} câu</p></div><button class="btn pri sm" data-a="lpSet" data-v="${ls.id}">Bắt đầu</button></div>` : '<p class="muted">Đã làm hết các bộ nghe. Làm lại câu sai hoặc luyện theo dạng.</p>'}
+        ${ls ? `<div class="adv"><div><b>Nghe: ${esc(setTitle(ls))}</b><p class="muted" lang="ja">問題${ls.md} ${MDL()[ls.md].ja} · ${ls.items.length} câu</p></div><button class="btn pri sm" data-a="lpSet" data-v="${ls.id}">Bắt đầu</button></div>` : '<p class="muted">Đã làm hết các bộ nghe. Làm lại câu sai hoặc luyện theo dạng.</p>'}
         ${rs ? `<div class="adv"><div><b>Đọc: ${esc(setTitle(rs))}</b><p class="muted" lang="ja">${[...new Set(rs.passages.map(p => p.type))].join(' · ')}</p></div><button class="btn pri sm" data-a="rpSet" data-v="${rs.id}">Bắt đầu</button></div>` : ''}
         ${wl ? `<div class="adv"><div><b>Làm lại ${wl} câu sai đến hạn</b></div><button class="btn sm" data-a="weakGo">Làm lại</button></div>` : ''}
       </div>` : `<button class="btn pri wide" data-a="drStart" ${dc ? '' : 'disabled'}>Ôn nhanh (${dc})</button><p class="hint">Điện thoại chỉ ôn phần yếu đã được phân tích từ bài làm trên laptop: cụm từ đã lưu và câu sai đến hạn.</p>`}
@@ -1346,8 +1489,9 @@ VIEWS.today = () => {
   }
   const bars = Array.from({ length: 14 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - 13 + i); return [d, dayMin(dayKey(d))]; });
   const mx = Math.max(120, ...bars.map(b => b[1]));
-  return `<div class="hero"><div class="hero-l"><span class="eyebrow">Luyện đề nghe · đọc</span><h1>${new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'numeric' })}</h1></div>
+  return `<div class="hero"><div class="hero-l"><span class="eyebrow">Luyện đề nghe · đọc · đang luyện ${curLv()}</span><h1>${new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'numeric' })}</h1></div>
     <div class="count"><span class="count-n">${days}</span><span class="count-l">ngày</span><span></span><span class="count-d">đến JLPT N2 ${fmtDate(ex.d)}</span></div></div>
+  <section class="panel lvbar"><span><b>Cấp đang luyện</b> <span class="hint">đổi cấp thì bài luyện, đề thi và điểm yếu đổi theo</span></span>${lvSwitchHTML()}</section>
   ${plan}
   <section class="grid2">
     <div class="panel"><div class="ph"><h2>Hôm nay</h2></div><div class="kpis"><div><b class="num">${Math.round((l.l || 0) / 60)}′</b><span>nghe</span></div><div><b class="num">${Math.round((l.r || 0) / 60)}′</b><span>đọc</span></div><div><b class="num">${l.n ? pct(l.c || 0, l.n) + '%' : '—'}</b><span>${l.n || 0} câu đúng</span></div></div></div>
@@ -1364,11 +1508,11 @@ function weekStats(back) {
 }
 function weeklySummary() {
   return {
-    generated: new Date().toISOString(), app: 'jlpt-n2', mode: 'luyen-de-nghe-doc', examTarget: S.set.target,
+    generated: new Date().toISOString(), app: 'jlpt-n2', mode: 'luyen-de-nghe-doc', level: curLv(), examTarget: S.set.target,
     weeks: [0, 1, 2, 3].map(weekStats).map(w => ({ week: w.w, minutes: w.min, listenMin: Math.round(w.l / 60), readMin: Math.round(w.r / 60), drillMin: Math.round(w.d / 60), answered: w.n, correct: w.c, activeDays: w.days })),
     types: C ? ALL_TYPES().map(typeStats).map(s => ({ type: typeName(s.t), vi: typeVi(s.t), done: s.done, total: s.total, lastPct: s.lastPct, firstPct: s.firstPct, avgSec: Math.round(s.avg), topWhy: s.topWhy })) : [],
     weak: C ? Object.keys(S.att).filter(id => ITEM[id] && ist(id).weak).length : 0, weakDue: C ? weakDue().length : 0,
-    phrases: Object.keys(S.phr).length, phrasesDue: duePhrases().length, exams: (S.exams || []).slice(-6),
+    phrases: Object.keys(S.phr).length, phrasesDue: duePhrases().length, exams: (S.exams || []).slice(-8),
   };
 }
 let PL = { reset: false };
@@ -1377,6 +1521,7 @@ VIEWS.plan = () => {
   return `<h1 class="pt">Cài đặt <span lang="ja">設定</span></h1>
   <section class="panel"><div class="ph"><h2>Kỳ thi mục tiêu</h2></div>
     <div class="pfields"><label class="fld">Ngày thi N2<select data-a="setTarget">${examDates().map(x => `<option value="${x.k}" ${x.k === targetExam().k ? 'selected' : ''}>${fmtDate(x.d)}</option>`).join('')}</select></label>
+    <label class="fld">Cấp đang luyện<select data-a="setLv">${LVS.map(l => `<option value="${l}" ${l === curLv() ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     <label class="fld">Thiết bị này<select data-a="setDev">${[['auto', 'Tự nhận'], ['pc', 'Máy tính: luyện chính'], ['phone', 'Điện thoại: ôn phần yếu']].map(([k, v]) => `<option value="${k}" ${S.set.dev === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label></div></section>
   <section class="panel"><div class="ph"><h2>Đồng bộ</h2><span class="syncline"><span class="dot syncdot"></span><span class="synctext"></span></span></div>${syncUI()}</section>
   <section class="panel"><div class="ph"><h2>Tài liệu khóa học</h2></div>${importUI()}</section>
@@ -1387,7 +1532,7 @@ VIEWS.plan = () => {
     <div class="row">${PL.reset ? '<button class="btn danger" data-a="resetYes">Xóa hết lịch sử làm bài trên mọi máy</button><button class="btn ghost" data-a="resetNo">Hủy</button>' : '<button class="btn ghost" data-a="reset">Xóa lịch sử làm bài…</button>'}</div></section>
   <p class="foot muted">Nội dung bài tập thuộc tài liệu khóa học của bạn, chỉ lưu trên máy chủ riêng. Mã QR: qrcode-generator (MIT).</p>`;
 };
-AFTER.plan = () => { if (CF.pair) loadQR().then(drawQR); if (CF.cfg && C && !IMP.have && !IMP.busy && devMode() === 'pc') audioHave().then(h => { if (h && route === 'plan') render(); }); };
+AFTER.plan = () => { if (CF.pair) loadQR().then(drawQR); if (CF.cfg && (allSets().length || allExams().length) && !IMP.have && !IMP.busy && devMode() === 'pc') audioHave().then(h => { if (h && route === 'plan') render(); }); };
 Object.assign(ACT, {
   setTarget(t) { S.set.target = t.value; save(); },
   setDev(t) { S.set.dev = t.value; save(); render(); },
@@ -1397,27 +1542,33 @@ Object.assign(ACT, {
 });
 /* ===== ĐỀ THẬT CÁC NĂM: thi thử full, luyện từng phần, chấm và đưa câu sai vào phân tích =====
    Đề và script hiển thị bằng PDF gốc (pdf.js), đáp án lấy từ bảng đáp án; mọi file nằm trên máy chủ riêng. */
-const RMAP = { 10: '短文', 11: '中文', 12: '統合理解', 13: '長文', 14: '情報検索' };
 const EXDEF = () => (C && C.exams) || [];
 const EXAM = id => EXDEF().find(e => e.id === id);
-function exType(lis, md) { return lis ? 'L' + md : md <= 9 ? 'K' + md : 'R' + RMAP[md]; }
+function exType(lis, md, lv) { if (lis) return 'L' + md; const p = PART(md, lv); return p.sec === 'K' ? 'K' + md : 'R' + p.rt; }
+/* Câu của một đề. N2 (cũ): lang = { số câu: [問題, đáp án] }. N3–N5: q = [[md, số câu in trên đề, đáp án], ...] vì số câu đếm lại theo từng bài thi */
 function exItems(e) {
   const out = [];
-  Object.entries(e.lang).map(([q, [md, a]]) => [+q, md, a]).sort((x, y) => x[0] - y[0]).forEach(([q, md, a]) => out.push({ key: 'k' + q, lis: false, md, n: q, ans: a, label: String(q) }));
+  if (e.q) e.q.forEach(([md, n, a]) => out.push({ key: `k${md}_${n}`, lis: false, md, n, ans: a, label: String(n) }));
+  else Object.entries(e.lang).map(([q, [md, a]]) => [+q, md, a]).sort((x, y) => x[0] - y[0]).forEach(([q, md, a]) => out.push({ key: 'k' + q, lis: false, md, n: q, ans: a, label: String(q) }));
   Object.keys(e.lis).map(Number).sort((a, b) => a - b).forEach(md => Object.keys(e.lis[md]).map(Number).sort((a, b) => a - b).forEach(n => {
     const arr = e.lis[md][n]; arr.forEach((a, j) => out.push({ key: `l${md}-${n}` + (arr.length > 1 ? '.' + (j + 1) : ''), lis: true, md, n, ans: a, label: n + (arr.length > 1 ? '-' + (j + 1) : '') }));
   }));
   return out;
 }
+const exLv = e => (e && e.lv) || 'N2';
+const exPapers = e => LVD(exLv(e)).papers;
+const exPaperOf = (e, x) => x.lis ? exPapers(e).length - 1 : PART(x.md, exLv(e)).pp;
+function exLisOn() { if (!EXM) return false; const e = EXAM(EXM.id); return EXM.mode === 'full' ? !!(e && exPapers(e)[EXM.part] || {}).lis : !!(EXM.sec && EXM.sec.lis); }
 const exItemId = (eid, key) => 'x' + eid + '-' + key;
 /* Đăng ký từng câu của đề vào ITEM để phần phân tích điểm yếu tính chung */
 const _indexContent = indexContent;
 indexContent = function () {
   _indexContent();
-  EXDEF().forEach(e => exItems(e).forEach(x => { const id = exItemId(e.id, x.key); ITEM[id] = { id, kind: 'X', exam: e.id, key: x.key, md: x.md, lis: x.lis, n: x.n, label: x.label, ans: [x.ans], type: exType(x.lis, x.md) }; }));
+  EXDEF().forEach(e => exItems(e).forEach(x => { const id = exItemId(e.id, x.key); ITEM[id] = { id, kind: 'X', exam: e.id, key: x.key, md: x.md, lis: x.lis, n: x.n, label: x.label, ans: [x.ans], type: exType(x.lis, x.md, exLv(e)) }; }));
 };
 indexContent();
-function itemLabel(it) { return it.kind === 'X' ? `Đề ${EXAM(it.exam) ? EXAM(it.exam).title : it.exam} · ${it.lis ? '聴解 問題' + it.md + ' 番' + it.label : 'câu ' + it.label}` : `${setTitle(SET[it.set])} · ${it.kind === 'L' ? 'câu ' + it.n : 'đọc'}`; }
+function exQName(e, md) { const p = PART(md, exLv(e)); return p ? `${PPS(p)} 問題${p.no}`.trim() : '問題' + md; }
+function itemLabel(it) { return it.kind === 'X' ? `Đề ${EXAM(it.exam) ? EXAM(it.exam).title : it.exam} · ${it.lis ? '聴解 問題' + it.md + ' 番' + it.label : exQName(EXAM(it.exam), it.md) + ' câu ' + it.label}` : `${setTitle(SET[it.set])} · ${it.kind === 'L' ? 'câu ' + it.n : 'đọc'}`; }
 
 /* ----- pdf.js (tải khi cần) ----- */
 const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
@@ -1447,7 +1598,7 @@ async function drawPdf() {
     if (PV.asset !== asset) return;
     box.innerHTML = ''; box.appendChild(cv); PV.err = '';
     const pn = $('#pvn'); if (pn) pn.textContent = `${PV.page} / ${PV.n}`;
-  } catch (e) { box.innerHTML = `<p class="bad-t">${esc(e.message || 'Không mở được PDF')}. ${String(e.message || '').includes('404') || e.status === 404 ? 'File chưa được tải lên: Cài đặt → Tài liệu khóa học → chọn thư mục N2_ĐỀ CÁC NĂM.' : ''}</p>`; }
+  } catch (e) { box.innerHTML = `<p class="bad-t">${esc(e.message || 'Không mở được PDF')}. ${String(e.message || '').includes('404') || e.status === 404 ? 'File chưa được tải lên: Cài đặt → Tài liệu → chọn thư mục chứa đề của cấp này.' : ''}</p>`; }
 }
 function pdfViewerHTML(tabs) {
   return `<div class="pv"><div class="pvbar">${tabs || ''}<button class="btn sm" data-a="pvPrev" aria-label="Trang trước">‹</button><span id="pvn" class="num muted">${PV.page} / ${PV.n || '…'}</span><button class="btn sm" data-a="pvNext" aria-label="Trang sau">›</button><button class="btn ghost sm" data-a="pvZoom">${PV.zoom > 1 ? 'Thu nhỏ' : 'Phóng to'}</button></div><div id="pdfbox" class="pdfbox"><p class="muted">Đang mở đề…</p></div></div>`;
@@ -1456,75 +1607,95 @@ Object.assign(ACT, {
   pvPrev() { if (PV.page > 1) { PV.page--; drawPdf(); } },
   pvNext() { if (!PV.n || PV.page < PV.n) { PV.page++; drawPdf(); } },
   pvZoom() { PV.zoom = PV.zoom > 1 ? 1 : 1.5; render(); },
-  pvGo(t) { PV.page = +t.dataset.v; drawPdf(); },
+  pvGo(t) { const [lis, md] = t.dataset.s.split(':').map(Number), loc = exLoc(EXAM(EXM.id), !!lis, md); EXM.view = 'p'; EXM.passet = loc.asset; PV.asset = loc.asset; PV.page = loc.page; if (lis && EXM.amd !== md && Array.isArray(EXAM(EXM.id).mp3) && EXM.mode !== 'full') EXM.amd = md; render(); },
 });
 addEventListener('keydown', e => { if (route !== 'exam' || !EXM || e.target.closest('input,textarea,select')) return; if (e.key === 'PageDown' || (e.key === 'ArrowRight' && e.altKey)) { e.preventDefault(); ACT.pvNext(); } if (e.key === 'PageUp' || (e.key === 'ArrowLeft' && e.altKey)) { e.preventDefault(); ACT.pvPrev(); } });
 
 /* ----- Phiên làm đề ----- */
 let EXM = null;   // { id, mode:'full'|'part', part, sec:{lis,md}, keys, ans, t0, acc, run, graded, view }
-const PART_MIN = [105, 50];
 function exKeys(e, mode, part, sec) {
-  return exItems(e).filter(x => mode === 'full' ? x.lis === (part === 1) : x.lis === sec.lis && x.md === sec.md).map(x => x.key);
+  return exItems(e).filter(x => mode === 'full' ? exPaperOf(e, x) === part : x.lis === sec.lis && x.md === sec.md).map(x => x.key);
 }
-function exStartPage(e, lis, md) { const m = lis ? e.lpg : e.pg; let best = lis ? (e.lpg[1] || 1) : 1; Object.entries(m).forEach(([k, v]) => { if (+k <= md) best = v; }); return best; }
+/* Vị trí của một 問題: { asset PDF, trang }. Đề N2: 1 file; đề N3–N5: pg[md] = [file, trang] */
+function exLoc(e, lis, md) {
+  const m = lis ? e.lpg : e.pg; let best = null; Object.entries(m).forEach(([k, v]) => { if (+k <= md && (!best || +k > best[0])) best = [+k, v]; });
+  if (!best) { const f = Object.entries(m).sort((a, b) => a[0] - b[0])[0]; best = f ? [+f[0], f[1]] : [0, 1]; }
+  const v = best[1];
+  return Array.isArray(v) ? { asset: exAsset(e.id, 'p' + v[0]), page: v[1] } : { asset: exAsset(e.id, 'p'), page: v };
+}
+function exFirstMd(e, part) { const xs = exItems(e).filter(x => exPaperOf(e, x) === part); return xs.length ? xs[0] : { lis: !!exPapers(e)[part].lis, md: 1 }; }
 function startExam(id, mode, part, sec) {
   const e = EXAM(id); if (!e) return;
-  EXM = { id, mode, part: part || 0, sec: sec || null, keys: [], ans: {}, t0: Date.now(), acc: 0, run: true, graded: false, view: 'p' };
+  EXM = { id, mode, part: part || 0, sec: sec || null, keys: [], ans: {}, t0: Date.now(), acc: 0, run: true, graded: false, view: 'p', amd: 0 };
   EXM.keys = exKeys(e, mode, EXM.part, sec);
-  PV = { asset: exAsset(id, 'p'), page: mode === 'full' ? (EXM.part ? exStartPage(e, true, 1) : 1) : exStartPage(e, sec.lis, sec.md), n: 0, zoom: PV.zoom || 1 };
+  const f = mode === 'full' ? exFirstMd(e, EXM.part) : sec, loc = exLoc(e, f.lis, f.md);
+  EXM.amd = f.lis ? f.md : 0; EXM.passet = loc.asset;
+  PV = { asset: loc.asset, page: loc.page, n: 0, zoom: PV.zoom || 1 };
   if (route !== 'exam') go('exam'); else render();
 }
+const exPartMin = () => exPapers(EXAM(EXM.id))[EXM.part].min;
 function exElapsed() { return EXM.acc + (EXM.run ? (Date.now() - EXM.t0) / 1000 : 0); }
 function exTimerText() {
   const e = exElapsed();
-  if (EXM.mode === 'full' && !EXM.graded) { const rem = Math.max(0, PART_MIN[EXM.part] * 60 - e); return { t: mmss(rem), late: rem < 300 }; }
+  if (EXM.mode === 'full' && !EXM.graded) { const rem = Math.max(0, exPartMin() * 60 - e); return { t: mmss(rem), late: rem < 300 }; }
   return { t: mmss(e), late: false };
 }
-setInterval(() => { if (route === 'exam' && EXM && EXM.run && !EXM.graded) { const el = $('#exclock'); if (el) { const x = exTimerText(); el.textContent = x.t; el.classList.toggle('late', x.late); } if (EXM.mode === 'full' && exElapsed() >= PART_MIN[EXM.part] * 60 && !EXM.beeped) { EXM.beeped = true; exBeep(); toast('Hết giờ phần này'); } } }, 1000);
+setInterval(() => { if (route === 'exam' && EXM && EXM.run && !EXM.graded) { const el = $('#exclock'); if (el) { const x = exTimerText(); el.textContent = x.t; el.classList.toggle('late', x.late); } if (EXM.mode === 'full' && exElapsed() >= exPartMin() * 60 && !EXM.beeped) { EXM.beeped = true; exBeep(); toast('Hết giờ phần này'); } } }, 1000);
 function exBeep() { try { const a = new (window.AudioContext || window.webkitAudioContext)(), o = a.createOscillator(), g = a.createGain(); o.frequency.value = 880; g.gain.value = 0.08; o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + 0.4); } catch (e) { } }
 function exSheet(e) {
   const items = exItems(e).filter(x => EXM.keys.includes(x.key));
   const groups = []; items.forEach(x => { const g = groups[groups.length - 1]; const gk = (x.lis ? 'L' : 'K') + x.md; if (!g || g.k !== gk) groups.push({ k: gk, lis: x.lis, md: x.md, xs: [x] }); else g.xs.push(x); });
-  return groups.map(g => `<div class="exg"><button class="lnkb exgh" data-a="pvGo" data-v="${exStartPage(e, g.lis, g.md)}"><b lang="ja">${g.lis ? '聴解 ' : ''}問題${g.md}</b> <span class="muted">${esc(typeVi(exType(g.lis, g.md)))}</span> <span class="hint">→ trang ${exStartPage(e, g.lis, g.md)}</span></button>
+  return groups.map(g => `<div class="exg"><button class="lnkb exgh" data-a="pvGo" data-s="${g.lis ? 1 : 0}:${g.md}"><b lang="ja">${g.lis ? '聴解 問題' + g.md : exQName(e, g.md)}</b> <span class="muted">${esc(typeVi(exType(g.lis, g.md, exLv(e))))}</span> <span class="hint">→ trang ${exLoc(e, g.lis, g.md).page}</span></button>
     ${g.xs.map(x => { const v = EXM.ans[x.key], ok = EXM.graded ? v === x.ans : null, iid = exItemId(e.id, x.key);
-      return `<div class="exrow${ok === false ? ' ng' : ''}"><span class="exn num">${esc(x.label)}</span>${[1, 2, 3, 4].slice(0, x.lis && x.md === 4 ? 3 : 4).map(o => `<button class="bub${v === o ? ' on' : ''}${EXM.graded && o === x.ans ? ' ok' : ''}" data-a="exPick" data-k="${x.key}" data-v="${o}" ${EXM.graded ? 'disabled' : ''}>${o}</button>`).join('')}
+      return `<div class="exrow${ok === false ? ' ng' : ''}"><span class="exn num">${esc(x.label)}</span>${[1, 2, 3, 4].slice(0, x.lis ? (LVD(exLv(e)).lis[x.md] || {}).nopt || 4 : 4).map(o => `<button class="bub${v === o ? ' on' : ''}${EXM.graded && o === x.ans ? ' ok' : ''}" data-a="exPick" data-k="${x.key}" data-v="${o}" ${EXM.graded ? 'disabled' : ''}>${o}</button>`).join('')}
       ${ok === false ? `<select class="exwhy" data-a="exWhy" data-id="${iid}" aria-label="Lý do sai"><option value="">lý do?</option>${WHY.map(([k, l]) => `<option value="${k}" ${(attempts(iid).slice(-1)[0] || [])[5] === k ? 'selected' : ''}>${l}</option>`).join('')}</select>` : ''}</div>`; }).join('')}</div>`).join('');
 }
 function exView() {
-  const e = EXAM(EXM.id), done = EXM.keys.filter(k => EXM.ans[k]).length, x = exTimerText();
-  const title = EXM.mode === 'redo' ? 'Làm lại câu sai' : EXM.mode === 'full' ? (EXM.part ? 'Nghe hiểu · 50′' : 'Kiến thức ngôn ngữ + Đọc hiểu · 105′') : `${EXM.sec.lis ? '聴解 ' : ''}問題${EXM.sec.md} · ${typeVi(exType(EXM.sec.lis, EXM.sec.md))}`;
-  const lisOn = EXM.mode === 'full' ? EXM.part === 1 : EXM.sec.lis;
+  const e = EXAM(EXM.id), done = EXM.keys.filter(k => EXM.ans[k]).length, x = exTimerText(), pp = exPapers(e), lv = exLv(e);
+  const title = EXM.mode === 'redo' ? 'Làm lại câu sai' : EXM.mode === 'full' ? `${pp[EXM.part].vi} · ${pp[EXM.part].min}′` : `${EXM.sec.lis ? '聴解 問題' + EXM.sec.md : exQName(e, EXM.sec.md)} · ${typeVi(exType(EXM.sec.lis, EXM.sec.md, lv))}`;
+  const lisOn = exLisOn(), multiA = Array.isArray(e.mp3), multiP = Array.isArray(e.pdf);
   const res = EXM.graded ? exResult(e) : null;
-  const tabs = EXM.graded ? `<div class="seg sm"><button class="${EXM.view === 'p' ? 'on' : ''}" data-a="exViewP">Đề</button><button class="${EXM.view === 's' ? 'on' : ''}" data-a="exViewS">Script nghe</button></div>` : '';
+  const files = multiP ? [...new Set(exItems(e).filter(i => EXM.keys.includes(i.key)).map(i => exLoc(e, i.lis, i.md).asset))] : [];
+  const ftabs = files.length > 1 ? files.map(a => `<button class="${EXM.view === 'p' && EXM.passet === a ? 'on' : ''}" data-a="exFile" data-v="${a}">${['文字語彙', '文法', '読解', '聴解'][+a.slice(-1)] || 'Đề'}</button>`).join('') : '';
+  const tabs = EXM.graded || ftabs ? `<div class="seg sm">${ftabs || `<button class="${EXM.view === 'p' ? 'on' : ''}" data-a="exViewP">Đề</button>`}${EXM.graded && e.script ? `<button class="${EXM.view === 's' ? 'on' : ''}" data-a="exViewS">Script nghe</button>` : ''}</div>` : '';
+  const amds = multiA ? [...new Set(exItems(e).filter(i => i.lis && EXM.keys.includes(i.key)).map(i => i.md))] : [];
+  const next = EXM.mode === 'full' && EXM.part + 1 < pp.length ? pp[EXM.part + 1] : null;
   return `<div class="rv-top"><button class="btn ghost sm" data-a="exQuit">Thoát</button><span class="muted">Đề ${esc(e.title)} · ${esc(title)}</span><span id="exclock" class="num clockm ${x.late ? 'late' : ''}">${x.t}</span></div>
   <div class="exgrid"><section class="panel expdf">${pdfViewerHTML(tabs)}</section>
   <aside class="panel exside">
-    ${lisOn ? `<div class="exaudio"><b>File nghe</b><audio id="exaudio" controls preload="metadata"></audio><p class="hint">Đề thật chỉ nghe 1 lần, không dừng. Luyện từng phần thì tua đến đúng 問題.</p></div>` : ''}
+    ${lisOn ? `<div class="exaudio"><b>File nghe</b>${amds.length > 1 ? `<div class="chips">${amds.map(m => `<button class="chip${EXM.amd === m ? ' on' : ''}" data-a="exAmd" data-v="${m}" lang="ja">問題${m}</button>`).join('')}</div>` : ''}<audio id="exaudio" controls preload="metadata"></audio><p class="hint">${multiA ? 'Mỗi 問題 một file, hết file tự chuyển sang 問題 kế tiếp. ' : ''}Đề thật chỉ nghe 1 lần, không dừng.${multiA ? '' : ' Luyện từng phần thì tua đến đúng 問題.'}</p></div>` : ''}
     ${res ? res : `<div class="ph sm"><h3>Phiếu trả lời</h3><span class="num muted">${done}/${EXM.keys.length}</span></div>`}
     <div class="sheet">${exSheet(e)}</div>
-    ${EXM.graded ? `<div class="row"><button class="btn" data-a="exRedo">Làm lại câu sai</button>${EXM.mode === 'full' && EXM.part === 0 ? '<button class="btn pri" data-a="exNextPart">Sang phần Nghe (50′)</button>' : ''}<button class="btn ghost" data-a="exClose">Về danh sách đề</button></div>`
+    ${EXM.graded ? `<div class="row"><button class="btn" data-a="exRedo">Làm lại câu sai</button>${next ? `<button class="btn pri" data-a="exNextPart">Sang phần ${esc(next.vi)} (${next.min}′)</button>` : ''}<button class="btn ghost" data-a="exClose">Về danh sách đề</button></div>`
       : `<div class="row">${EXM.run ? '<button class="btn sm" data-a="exPause">Tạm dừng</button>' : '<button class="btn sm" data-a="exResume">Tiếp tục</button>'}<button class="btn pri" data-a="exSubmit">Nộp và chấm</button></div>`}
   </aside></div>`;
 }
 AFTER.exam = () => {
   if (EXM) {
-    PV.asset = EXM.graded && EXM.view === 's' ? exAsset(EXM.id, 's') : exAsset(EXM.id, 'p'); drawPdf();
-    const au = $('#exaudio'); if (au && !au.src) mediaUrl(exAsset(EXM.id, 'a')).then(u => { au.src = u; }).catch(e => toast(e.message));
+    const e = EXAM(EXM.id);
+    PV.asset = EXM.graded && EXM.view === 's' ? exAsset(EXM.id, 's') : (EXM.passet || exAsset(EXM.id, 'p')); drawPdf();
+    const au = $('#exaudio');
+    if (au) {
+      const multi = Array.isArray(e.mp3), k = multi ? 'a' + (EXM.amd || 1) : 'a';
+      if (au.dataset.k !== k) { au.dataset.k = k; const auto = multi && EXM.autoNext; EXM.autoNext = false; mediaUrl(exAsset(EXM.id, k)).then(u => { au.src = u; if (auto) au.play().catch(() => { }); }).catch(err => toast(err.message)); }
+      if (multi) au.onended = () => { const mds = [...new Set(exItems(e).filter(i => i.lis && EXM.keys.includes(i.key)).map(i => i.md))], nx = mds[mds.indexOf(EXM.amd) + 1]; if (nx && !EXM.graded) { EXM.amd = nx; EXM.autoNext = true; const loc = exLoc(e, true, nx); EXM.passet = loc.asset; PV.page = loc.page; render(); } };
+    }
     return;
   }
-  const f = $('#scoreform'); if (f) f.onsubmit = ev => { ev.preventDefault(); const s = [0, 1, 2].map(i => Math.max(0, Math.min(60, +$('#sf-' + i).value || 0))); S.exams.push({ id: Date.now().toString(36), d: $('#sf-d').value, lv: 'N2', s }); save(); const j = judge('N2', s); toast(`Tổng ${j.total}/180 · ${j.ok ? 'Đỗ' : 'Chưa đỗ'}`); render(); };
+  const f = $('#scoreform'); if (f) f.onsubmit = ev => { ev.preventDefault(); const lv = curLv(), R = LVD(lv).rule; const s = R.secs.map((x, i) => Math.max(0, Math.min(x[1], +$('#sf-' + i).value || 0))); S.exams.push({ id: Date.now().toString(36), d: $('#sf-d').value, lv, s }); save(); const j = judge(lv, s); toast(`Tổng ${j.total}/180 · ${j.ok ? 'Đỗ' : 'Chưa đỗ'}`); render(); };
   if (CF.cfg && EXDEF().length && !IMP.have && !EXL.asked) { EXL.asked = true; audioHave().then(h => { if (h && route === 'exam' && !EXM) render(); }); }
 };
 /* Điểm ước tính: % đúng mỗi phần × 60 (JLPT thật chấm theo thang chuẩn hóa nên chỉ để tham khảo) */
 function exSecs(e, ans) {
-  const it = exItems(e), sec = x => x.lis ? 2 : x.md <= 9 ? 0 : 1;
-  return [0, 1, 2].map(i => { const xs = it.filter(x => sec(x) === i), ok = xs.filter(x => ans[x.key] === x.ans).length, an = xs.filter(x => ans[x.key]).length; return { n: xs.length, ok, an, est: xs.length ? Math.round(ok / xs.length * 60) : 0 }; });
+  const it = exItems(e), lv = exLv(e), R = LVD(lv).rule, three = R.secs.length === 3;
+  const sec = x => x.lis ? R.secs.length - 1 : three ? (PART(x.md, lv).sec === 'K' ? 0 : 1) : 0;
+  return R.secs.map((r, i) => { const xs = it.filter(x => sec(x) === i), ok = xs.filter(x => ans[x.key] === x.ans).length, an = xs.filter(x => ans[x.key]).length; return { n: xs.length, ok, an, est: xs.length ? Math.round(ok / xs.length * r[1]) : 0 }; });
 }
 function exResult(e) {
   const its = exItems(e).filter(x => EXM.keys.includes(x.key)), ok = its.filter(x => EXM.ans[x.key] === x.ans).length;
   const byMd = {}; its.forEach(x => { const k = (x.lis ? 'L' : 'K') + x.md, b = byMd[k] || (byMd[k] = { lis: x.lis, md: x.md, n: 0, ok: 0 }); b.n++; if (EXM.ans[x.key] === x.ans) b.ok++; });
   return `<div class="expl ${pct(ok, its.length) >= 60 ? 'good' : 'bad'}"><b>${ok}/${its.length} câu đúng (${pct(ok, its.length)}%)</b> · ${mmss(EXM.acc)}</div>
-    <div class="mdres">${Object.values(byMd).map(b => `<span class="tag ${pct(b.ok, b.n) < 60 ? 'badtag' : ''}" lang="ja">${b.lis ? '聴' : ''}問題${b.md}: ${b.ok}/${b.n}</span>`).join('')}</div>
+    <div class="mdres">${Object.values(byMd).map(b => `<span class="tag ${pct(b.ok, b.n) < 60 ? 'badtag' : ''}" lang="ja">${b.lis ? '聴解 問題' + b.md : exQName(e, b.md)}: ${b.ok}/${b.n}</span>`).join('')}</div>
     <p class="hint">Câu sai (đỏ) đã vào Điểm yếu. Chọn lý do sai cho từng câu; xem Script nghe ở thanh trên.</p>`;
 }
 Object.assign(ACT, {
@@ -1539,12 +1710,14 @@ Object.assign(ACT, {
     its.forEach(x => rec(exItemId(e.id, x.key), [EXM.ans[x.key] || 0], EXM.ans[x.key] === x.ans, per, 0));
     if (EXM.mode === 'full') {
       EXFULL[EXM.id] = { ...(EXFULL[EXM.id] || {}), ...EXM.ans };
-      if (EXM.part === 1) { const s = exSecs(e, EXFULL[EXM.id]); S.exams.push({ id: Date.now().toString(36), d: dayKey(), lv: 'N2', s: s.map(x => x.est), src: e.id, est: 1 }); save(); const j = judge('N2', s.map(x => x.est)); toast(`Ước tính ${j.total}/180 · ${j.ok ? 'Đỗ' : 'Chưa đỗ'}`); delete EXFULL[EXM.id]; }
+      if (EXM.part === exPapers(e).length - 1) { const s = exSecs(e, EXFULL[EXM.id]), lv = exLv(e); S.exams.push({ id: Date.now().toString(36), d: dayKey(), lv, s: s.map(x => x.est), src: e.id, est: 1 }); save(); const j = judge(lv, s.map(x => x.est)); toast(`Ước tính ${j.total}/180 · ${j.ok ? 'Đỗ' : 'Chưa đỗ'}`); delete EXFULL[EXM.id]; }
     }
     render(); scrollTo(0, 0);
   },
-  exNextPart() { startExam(EXM.id, 'full', 1); },
-  exRedo() { const e = EXAM(EXM.id), wrong = EXM.keys.filter(k => EXM.ans[k] !== exItems(e).find(x => x.key === k).ans); if (!wrong.length) { toast('Không có câu sai'); return; } EXM = { ...EXM, mode: 'redo', keys: wrong, ans: {}, graded: false, run: true, t0: Date.now(), acc: 0, sec: EXM.sec || { lis: EXM.part === 1, md: 0 } }; render(); },
+  exNextPart() { startExam(EXM.id, 'full', EXM.part + 1); },
+  exFile(t) { EXM.view = 'p'; EXM.passet = t.dataset.v; PV.page = 1; render(); },
+  exAmd(t) { EXM.amd = +t.dataset.v; const loc = exLoc(EXAM(EXM.id), true, EXM.amd); EXM.view = 'p'; EXM.passet = loc.asset; PV.page = loc.page; render(); },
+  exRedo() { const e = EXAM(EXM.id), wrong = EXM.keys.filter(k => EXM.ans[k] !== exItems(e).find(x => x.key === k).ans); if (!wrong.length) { toast('Không có câu sai'); return; } EXM = { ...EXM, mode: 'redo', keys: wrong, ans: {}, graded: false, run: true, t0: Date.now(), acc: 0, sec: EXM.sec || { lis: exLisOn(), md: 0 } }; render(); },
   exViewP() { EXM.view = 'p'; PV.page = 1; render(); },
   exViewS() { EXM.view = 's'; PV.page = 1; render(); },
   exWhy(t) { const a = S.att[t.dataset.id]; if (a && a.length) { a[a.length - 1][5] = t.value; save(); } },
@@ -1557,7 +1730,7 @@ Object.assign(ACT, {
 });
 const EXFULL = {};   // đáp án phần 1 của bài thi full, chờ phần nghe để tính tổng
 let EXL = { open: null, asked: false, quit: false };
-function exAvail(e) { return !IMP.have || ['p', 'a'].every(k => IMP.have.has(exAsset(e.id, k))); }
+function exAvail(e) { return !IMP.have || exFiles(e).filter(f => f[0] !== 's').every(([k]) => IMP.have.has(exAsset(e.id, k))); }
 function exStat(e) {
   const its = exItems(e), done = its.filter(x => attempts(exItemId(e.id, x.key)).length), ok = done.filter(x => ist(exItemId(e.id, x.key)).first);
   const full = S.exams.filter(x => x.src === e.id).slice(-1)[0];
@@ -1565,27 +1738,31 @@ function exStat(e) {
 }
 VIEWS.exam = () => {
   if (EXM) return exView();
-  const ex = EXDEF(), hist = S.exams.slice().sort((a, b) => a.d < b.d ? -1 : 1), R = LEVEL_RULES.N2;
-  const secBtns = e => `<div class="chips">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(m => `<button class="chip" data-a="exPart" data-v="${e.id}" data-s="0:${m}" lang="ja">問題${m}</button>`).join('')}</div><div class="chips">${[10, 11, 12, 13, 14].map(m => `<button class="chip" data-a="exPart" data-v="${e.id}" data-s="0:${m}" lang="ja">読解 問題${m}</button>`).join('')}</div><div class="chips">${[1, 2, 3, 4, 5].map(m => `<button class="chip" data-a="exPart" data-v="${e.id}" data-s="1:${m}" lang="ja">聴解 問題${m}</button>`).join('')}</div>`;
-  return `<h1 class="pt">Thi thử <span lang="ja">模試</span></h1>
-  ${ex.length ? `<section class="panel"><div class="ph"><h2>Đề thật các năm</h2><span class="muted">${ex.length} đề · 2010–2026</span></div>
-    <p class="hint">Thi full: 105′ kiến thức + đọc, rồi 50′ nghe; chấm theo bảng đáp án, điểm từng phần ước tính = % đúng × 60. Hoặc làm từng 問題 để luyện dạng mình yếu.</p>
-    <div class="exlist">${ex.map(e => { const st = exStat(e), av = exAvail(e), j = st.full ? judge('N2', st.full.s) : null; return `<div class="exi"><div class="exh"><b>${esc(e.title)}</b>${!av ? '<span class="tag">chưa tải file</span>' : ''}<span class="muted num">${st.done ? `đã làm ${st.done}/${st.n} câu · đúng lần đầu ${st.firstPct}%` : `${st.n} câu`}</span>${j ? `<span class="pill ${j.ok ? 'good' : 'bad'}">${j.total}/180</span>` : ''}
+  const lv = curLv(), D = LVD(lv), R = D.rule, ex = EXDEF(), hist = S.exams.filter(h => (h.lv || 'N2') === lv).sort((a, b) => a.d < b.d ? -1 : 1), max = R.secs.reduce((a, x) => a + x[1], 0);
+  const kp = D.parts.filter(p => p.sec === 'K'), rp = D.parts.filter(p => p.sec === 'R');
+  const chip = (e, lis, md, label) => `<button class="chip" data-a="exPart" data-v="${e.id}" data-s="${lis}:${md}" lang="ja">${label}</button>`;
+  const secBtns = e => `<div class="chips">${kp.map(p => chip(e, 0, p.md, `${PPS(p)} 問題${p.no}`.trim())).join('')}</div><div class="chips">${rp.map(p => chip(e, 0, p.md, `読解 問題${p.no}`)).join('')}</div><div class="chips">${Object.keys(D.lis).map(m => chip(e, 1, m, `聴解 問題${m}`)).join('')}</div>`;
+  const flow = D.papers.map(p => `${p.min}′ ${p.vi.toLowerCase()}`).join(', rồi ');
+  return `<h1 class="pt">Thi thử ${lv} <span lang="ja">模試</span></h1>
+  <section class="panel lvbar"><span><b>Cấp đang luyện</b></span>${lvSwitchHTML()}</section>
+  ${ex.length ? `<section class="panel"><div class="ph"><h2>${lv === 'N2' ? 'Đề thật các năm' : 'Đề chính thức (公式問題集)'}</h2><span class="muted">${ex.length} đề</span></div>
+    <p class="hint">Thi full: ${flow}; chấm theo bảng đáp án, điểm từng phần ước tính = % đúng × điểm tối đa của phần. Hoặc làm từng 問題 để luyện dạng mình yếu.</p>
+    <div class="exlist">${ex.map(e => { const st = exStat(e), av = exAvail(e), j = st.full ? judge(lv, st.full.s) : null; return `<div class="exi"><div class="exh"><b>${esc(e.title)}</b>${!av ? '<span class="tag">chưa tải file</span>' : ''}<span class="muted num">${st.done ? `đã làm ${st.done}/${st.n} câu · đúng lần đầu ${st.firstPct}%` : `${st.n} câu`}</span>${j ? `<span class="pill ${j.ok ? 'good' : 'bad'}">${j.total}/${max}</span>` : ''}
       <span class="exb"><button class="btn sm pri" data-a="exFull" data-v="${e.id}" ${av ? '' : 'disabled'}>Thi full</button><button class="btn sm" data-a="exToggle" data-v="${e.id}" ${av ? '' : 'disabled'}>Từng phần</button></span></div>${EXL.open === e.id ? secBtns(e) : ''}</div>`; }).join('')}</div>
-  </section>` : `<section class="panel"><h2>Đề thật các năm</h2><p class="muted">Chưa có. Trên laptop: Cài đặt → Tài liệu khóa học → chọn thư mục <b>N2_ĐỀ CÁC NĂM</b>.</p></section>`}
-  <section class="grid2"><div class="panel"><div class="ph"><h2>Nhập điểm đề ngoài</h2></div>
+  </section>` : `<section class="panel"><h2>Đề thi ${lv}</h2><p class="muted">Chưa có. Trên laptop: Cài đặt → Tài liệu → chọn thư mục <b>${lv === 'N2' ? 'N2_ĐỀ CÁC NĂM' : 'JLPT-CHINH-THUC-N3-N5'}</b>.</p></section>`}
+  <section class="grid2"><div class="panel"><div class="ph"><h2>Nhập điểm đề ngoài (${lv})</h2></div>
       <form id="scoreform" class="sform"><label>Ngày <input id="sf-d" type="date" value="${dayKey()}" required></label>${R.secs.map((s, i) => `<label>${s[0]} <small>(0–${s[1]})</small><input id="sf-${i}" type="number" inputmode="numeric" min="0" max="${s[1]}" required></label>`).join('')}<button class="btn pri" type="submit">Lưu</button></form>
-      <p class="hint">N2 đỗ khi tổng ≥ 90/180 và mỗi phần ≥ 19.</p></div>
-    <div class="panel"><div class="ph"><h2>Lịch sử điểm</h2><span class="muted num">${hist.length}</span></div>
-    ${hist.length ? `<div class="tbl"><table><thead><tr><th>Ngày</th><th>Đề</th><th>Từng phần</th><th>Tổng</th><th></th></tr></thead><tbody>${hist.map(h => { const j = judge('N2', h.s); return `<tr><td class="num">${h.d}</td><td>${h.src ? esc(EXAM(h.src) ? EXAM(h.src).title : h.src) + (h.est ? ' <small class="muted">ước tính</small>' : '') : '—'}</td><td class="num">${h.s.join(' / ')}</td><td class="num"><b>${j.total}</b> ${j.ok ? '<span class="pill good">Đỗ</span>' : '<span class="pill bad">Trượt</span>'}</td><td><button class="btn ghost sm" data-a="exDel" data-v="${h.id}">Xóa</button></td></tr>`; }).join('')}</tbody></table></div>` : '<p class="muted">Chưa có.</p>'}</div></section>
-  <section class="grid2"><details class="panel"><summary><h2>Cấu trúc đề N2 (105′)</h2></summary><div class="tbl"><table><thead><tr><th>問題</th><th>Dạng</th><th>Làm gì</th><th>Câu</th></tr></thead><tbody>${EXAM_PARTS.map(r => `<tr><td>${r[0]}</td><td lang="ja">${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</tbody></table></div></details>
-    <details class="panel"><summary><h2>Nghe hiểu (50′)</h2></summary><div class="tbl"><table><thead><tr><th>問題</th><th>Dạng</th><th>Mẹo</th></tr></thead><tbody>${[1, 2, 3, 4, 5].map(m => `<tr><td>${m}</td><td lang="ja">${MD[m].ja}</td><td>${esc(MD[m].tip)}</td></tr>`).join('')}</tbody></table></div></details></section>`;
+      <p class="hint">${lv} đỗ khi tổng ≥ ${R.pass}/${max} và ${R.secs.map(s => `${s[0]} ≥ ${s[2]}`).join(', ')}.</p></div>
+    <div class="panel"><div class="ph"><h2>Lịch sử điểm ${lv}</h2><span class="muted num">${hist.length}</span></div>
+    ${hist.length ? `<div class="tbl"><table><thead><tr><th>Ngày</th><th>Đề</th><th>Từng phần</th><th>Tổng</th><th></th></tr></thead><tbody>${hist.map(h => { const j = judge(lv, h.s); return `<tr><td class="num">${h.d}</td><td>${h.src ? esc(EXAM(h.src) ? EXAM(h.src).title : h.src) + (h.est ? ' <small class="muted">ước tính</small>' : '') : '—'}</td><td class="num">${h.s.join(' / ')}</td><td class="num"><b>${j.total}</b> ${j.ok ? '<span class="pill good">Đỗ</span>' : '<span class="pill bad">Trượt</span>'}</td><td><button class="btn ghost sm" data-a="exDel" data-v="${h.id}">Xóa</button></td></tr>`; }).join('')}</tbody></table></div>` : '<p class="muted">Chưa có.</p>'}</div></section>
+  <section class="grid2"><details class="panel"><summary><h2>Cấu trúc đề ${lv}</h2></summary><div class="tbl"><table><thead><tr><th>Bài thi</th><th>問題</th><th>Dạng</th><th>Làm gì</th><th>Câu</th></tr></thead><tbody>${D.parts.map(r => `<tr><td lang="ja">${D.papers[r.pp].ja} ${D.papers[r.pp].min}′</td><td>${r.no}</td><td lang="ja">${r.ja}</td><td>${r.vi}</td><td>${r.n}</td></tr>`).join('')}</tbody></table></div></details>
+    <details class="panel"><summary><h2>Nghe hiểu (${D.papers[D.papers.length - 1].min}′)</h2></summary><div class="tbl"><table><thead><tr><th>問題</th><th>Dạng</th><th>Câu</th><th>Mẹo</th></tr></thead><tbody>${Object.keys(D.lis).map(m => `<tr><td>${m}</td><td lang="ja">${D.lis[m].ja}</td><td>${D.lis[m].n}</td><td>${esc(D.lis[m].tip)}</td></tr>`).join('')}</tbody></table></div></details></section>`;
 };
 ACT.exDel = t => { S.exams = S.exams.filter(x => x.id !== t.dataset.v); S.exdel = [...new Set([...(S.exdel || []), t.dataset.v])]; save(); render(); };
 /* ===== BOOT ===== */
 handlePairHash(); readHash(); render();
 if (!CF.start()) CF.status().then(() => { if (route === 'plan') render(); });
-else if (!C) fetchContent().then(ok => { if (ok) render(); });
+else if (!Object.keys(CS).length) fetchContent().then(ok => { if (ok) render(); });
 </script>
 <script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}</script>
 </body></html>
