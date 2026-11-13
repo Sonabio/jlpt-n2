@@ -17,6 +17,7 @@ function buildC() {
 }
 function indexContent() {
   for (const k in ITEM) delete ITEM[k]; for (const k in SET) delete SET[k]; for (const k in PASS) delete PASS[k];
+  grIndex();   // câu luyện ngữ pháp tự soạn (có cả khi chưa nhập tài liệu)
   if (!C) return;
   C.sets.forEach(s => {
     SET[s.id] = s;
@@ -27,8 +28,8 @@ function indexContent() {
 }
 function setTitle(s) { return s.title || (s.src === 'f-' ? `Nền tảng · Chương ${s.unit}` : `Chặng 2 · Bài ${s.unit}`); }
 const PPS = p => p.sec === 'R' ? '読解' : LVD().papers.length > 2 ? (p.pp ? '文法' : '文字語彙') : '';
-function typeName(t) { if (t[0] === 'L') return `聴解 問題${t[1]} ${MDL()[t[1]].ja}`; if (t[0] === 'K') { const p = PART(t.slice(1)); return `${PPS(p)} 問題${p.no} ${p.ja}`.trim(); } return `読解 ${t.slice(1)}`; }
-function typeVi(t) { if (t[0] === 'L') return `Nghe ${t[1]} · ${MDL()[t[1]].vi}`; if (t[0] === 'K') { const p = PART(t.slice(1)); return `${p.pp || (LVD().papers.length < 3 && p.md >= 7) ? 'Ngữ pháp' : 'Từ vựng'} · ${p.vi}`; } return `Đọc · ${RTL()[t.slice(1)].vi}`; }
+function typeName(t) { if (t[0] === 'G') return t === 'GC' ? '文法 文法形式の判断（自作）' : '文法 文の組み立て（自作）'; if (t[0] === 'L') return `聴解 問題${t[1]} ${MDL()[t[1]].ja}`; if (t[0] === 'K') { const p = PART(t.slice(1)); return `${PPS(p)} 問題${p.no} ${p.ja}`.trim(); } return `読解 ${t.slice(1)}`; }
+function typeVi(t) { if (t[0] === 'G') return t === 'GC' ? 'Ngữ pháp · Chọn mẫu đúng' : 'Ngữ pháp · Sắp xếp câu ★'; if (t[0] === 'L') return `Nghe ${t[1]} · ${MDL()[t[1]].vi}`; if (t[0] === 'K') { const p = PART(t.slice(1)); return `${p.pp || (LVD().papers.length < 3 && p.md >= 7) ? 'Ngữ pháp' : 'Từ vựng'} · ${p.vi}`; } return `Đọc · ${RTL()[t.slice(1)].vi}`; }
 /* Nội dung lưu trên máy: IndexedDB (bản cũ trong localStorage được chuyển sang rồi xóa để giải phóng chỗ) */
 function loadContentLocal() { SLOTS.forEach(k => { try { const r = localStorage.getItem(CK(k)); if (r) CS[k] = JSON.parse(r); } catch (e) { } }); buildC(); }
 async function saveContentLocal(k) { await DB.put('content', k, CS[k]); try { localStorage.removeItem(CK(k)); } catch (e) { } }

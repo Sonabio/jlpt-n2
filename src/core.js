@@ -58,7 +58,7 @@ setInterval(() => {
   if (document.visibilityState !== 'visible' || Date.now() - ACTIVE.last > 120000) return;
   const audioOn = window.AU && ((AU.el && !AU.el.paused) || (AU.tts && AU.tts.on));
   const exl = route === 'exam' && EXM && EXM.run && !EXM.graded ? (exLisOn() ? 'l' : 'r') : null;
-  const f = exl || (route === 'listen' && (LP || audioOn) ? 'l' : route === 'read' && RP ? 'r' : route === 'drill' && DR ? 'd' : null);
+  const f = exl || (route === 'listen' && (LP || audioOn) ? 'l' : route === 'read' && RP ? 'r' : (route === 'drill' && DR) || (route === 'grammar' && GP) ? 'd' : null);
   if (!f && !audioOn) return;
   logAdd(f || 'l', 15); tickSave();
 }, 15000);
@@ -96,8 +96,8 @@ function setLevel(lv) { if (!LVDEF[lv] || lv === curLv()) return; if (typeof aud
 function lvSwitchHTML() { return `<div class="seg lvsw" role="group" aria-label="Cấp đang luyện">${LVS.map(l => `<button class="${l === curLv() ? 'on' : ''}" data-a="setLv" data-v="${l}">${l}</button>`).join('')}</div>`; }
 
 /* ===== ĐIỀU HƯỚNG ===== */
-const ROUTES = [['today', 'Hôm nay', '今日'], ['listen', 'Luyện nghe', '聴解'], ['read', 'Luyện đọc', '読解'], ['weak', 'Điểm yếu', '弱点'], ['drill', 'Ôn nhanh', '復習'], ['exam', 'Thi thử', '模試'], ['plan', 'Cài đặt', '設定']];
-const PHONE_NAV = ['today', 'drill', 'weak', 'read', 'plan'];
+const ROUTES = [['today', 'Hôm nay', '今日'], ['listen', 'Luyện nghe', '聴解'], ['read', 'Luyện đọc', '読解'], ['grammar', 'Ngữ pháp', '文法'], ['weak', 'Điểm yếu', '弱点'], ['drill', 'Ôn nhanh', '復習'], ['exam', 'Thi thử', '模試'], ['plan', 'Cài đặt', '設定']];
+const PHONE_NAV = ['today', 'drill', 'weak', 'read', 'grammar', 'plan'];
 let route = 'today';
 function go(r) { if (location.hash !== '#' + r) location.hash = r; else { route = r; render(); } }
 function readHash() { const h = location.hash.slice(1); route = ROUTES.some(x => x[0] === h) ? h : 'today'; }
@@ -117,7 +117,7 @@ function render() {
   (AFTER[route] || (() => { }))();
 }
 const AFTER = {};
-function busyView() { return (route === 'listen' && LP && !LP.done) || (route === 'read' && RP && !RP.done) || (route === 'drill' && DR && !DR.done); }
+function busyView() { return (route === 'listen' && LP && !LP.done) || (route === 'read' && RP && !RP.done) || (route === 'drill' && DR && !DR.done) || (route === 'grammar' && GP && !GP.done); }
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-a]'); if (!t) return;
   const a = t.dataset.a; if (!a || !ACT[a]) return;

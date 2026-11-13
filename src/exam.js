@@ -26,7 +26,7 @@ indexContent = function () {
 };
 indexContent();
 function exQName(e, md) { const p = PART(md, exLv(e)); return p ? `${PPS(p)} 問題${p.no}`.trim() : '問題' + md; }
-function itemLabel(it) { return it.kind === 'X' ? `Đề ${EXAM(it.exam) ? EXAM(it.exam).title : it.exam} · ${it.lis ? '聴解 問題' + it.md + ' 番' + it.label : exQName(EXAM(it.exam), it.md) + ' câu ' + it.label}` : `${setTitle(SET[it.set])} · ${it.kind === 'L' ? 'câu ' + it.n : 'đọc'}`; }
+function itemLabel(it) { if (it.kind === 'G') return grLabel(it); return it.kind === 'X' ? `Đề ${EXAM(it.exam) ? EXAM(it.exam).title : it.exam} · ${it.lis ? '聴解 問題' + it.md + ' 番' + it.label : exQName(EXAM(it.exam), it.md) + ' câu ' + it.label}` : `${setTitle(SET[it.set])} · ${it.kind === 'L' ? 'câu ' + it.n : 'đọc'}`; }
 
 /* ----- pdf.js 3.11.174 (nằm sẵn trong app, chạy offline) ----- */
 const PDFJS = 'vendor/pdfjs/';
