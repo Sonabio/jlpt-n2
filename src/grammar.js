@@ -33,9 +33,12 @@ function grOrder(g) {
   return { pre: clean(m[1]), post: clean(m[3]), chunks, opts, star, ans: opts.indexOf(chunks[star]) + 1 };
 }
 
-/* Đưa câu luyện của cấp đang học vào ITEM (để Điểm yếu, Ôn nhanh dùng chung) — gọi từ indexContent */
+/* Cấp luyện ngữ pháp: cấp đang chọn ở Tra cứu (vd N1 — cấp chưa có ở thanh cấp chung), không thì cấp đang học */
+function grPLv() { return GL && GL.lv && GRAM[GL.lv] ? GL.lv : curLv(); }   // GL chưa có khi content.js gọi grIndex lúc khởi động
+/* Đưa câu luyện của cấp đang học (+ cấp luyện ngữ pháp) vào ITEM (để Điểm yếu, Ôn nhanh dùng chung) — gọi từ indexContent */
 function grIndex() {
-  grList(curLv()).forEach(g => {
+  for (const k in ITEM) if (ITEM[k].kind === 'G') delete ITEM[k];
+  [...new Set([curLv(), grPLv()])].flatMap(grList).forEach(g => {
     ITEM['gc:' + g.key] = { id: 'gc:' + g.key, kind: 'G', type: 'GC', gk: g.key, ans: [grChoose(g).ans], nopt: 4 };
     ITEM['go:' + g.key] = { id: 'go:' + g.key, kind: 'G', type: 'GO', gk: g.key, ans: [grOrder(g).ans], nopt: 4 };
   });
@@ -82,7 +85,12 @@ function gqDone(q) {
 
 /* ----- phiên luyện trên trang Ngữ pháp ----- */
 let GP = null;   // { ids, i, q, res, label, done }
-const GL = { lv: null, q: '', gr: 'all', open: null };
+var GL = { lv: null, q: '', gr: 'all', open: null };   // var: grIndex có thể chạy trước dòng này lúc khởi động
+/* Thống kê 1 dạng (GC/GO) chỉ trong 1 cấp */
+function grStats(t, lv) {
+  const its = typeItems(t).filter(i => i.gk.startsWith(lv + ':')), done = its.filter(i => attempts(i.id).length);
+  return { total: its.length, done: done.length, lastPct: pct(done.filter(i => ist(i.id).last).length, done.length) };
+}
 function grStart(ids, label) {
   if (!ids.length) { toast('Không có câu nào'); return; }
   GP = { ids, i: 0, res: [], label, done: false, q: { id: ids[0], t0: Date.now() } };
@@ -90,7 +98,7 @@ function grStart(ids, label) {
 }
 /* Chọn n câu: ưu tiên câu chưa làm, rồi câu làm lâu nhất */
 function grPick(kind, n, keys) {
-  const lv = curLv(), gs = keys ? keys.map(grByKey).filter(Boolean) : grList(lv);
+  const lv = grPLv(), gs = keys ? keys.map(grByKey).filter(Boolean) : grList(lv);
   const ids = gs.flatMap(g => kind === 'mix' ? ['gc:' + g.key, 'go:' + g.key] : [(kind === 'GC' ? 'gc:' : 'go:') + g.key]);
   const fresh = shuffle(ids.filter(id => !attempts(id).length)), old = ids.filter(id => attempts(id).length).sort((a, b) => attempts(a).slice(-1)[0][0] - attempts(b).slice(-1)[0][0]);
   return [...fresh, ...old].slice(0, n);
@@ -100,12 +108,13 @@ function grWeakDue() { return weakDue().filter(id => ITEM[id].kind === 'G'); }
 VIEWS.grammar = () => {
   if (GP && !GP.done) return gpView();
   if (GP && GP.done) return gpSummary();
-  const lv = curLv(), list = grList(lv), wd = grWeakDue();
-  const stOf = t => typeStats(t), sc = stOf('GC'), so = stOf('GO');
+  const lv = grPLv(), list = grList(lv), wd = grWeakDue();
+  const sc = grStats('GC', lv), so = grStats('GO', lv);
   const starKeys = list.filter(g => grStarred(g.key)).map(g => g.key);
   const kparts = C ? PARTS().filter(p => p.sec === 'K' && typeVi('K' + p.md).startsWith('Ngữ pháp')).map(p => ({ p, n: typeItems('K' + p.md).filter(i => i.kind === 'R').length })).filter(x => x.n) : [];
   // cấp tra cứu: mặc định theo cấp đang học (nếu cấp đó chưa có dữ liệu thì xem tất cả)
   const practice = list.length ? `<section class="panel"><div class="ph"><h2>Luyện tập ${lv}</h2><span class="muted num">${list.length} mẫu</span></div>
+      ${lv !== curLv() ? `<p class="hint">Đang luyện ngữ pháp ${lv} (chọn ở phần Tra cứu bên dưới). Bấm lại nút ${lv} để về ${curLv()}.</p>` : ''}
       ${wd.length ? `<div class="adv"><div><b>${wd.length} câu ngữ pháp sai</b> đến hạn làm lại</div><button class="btn pri sm" data-a="grRun" data-v="weak">Làm lại câu sai</button></div>` : ''}
       <div class="mdgrid">
         <div class="mdc"><b lang="ja">文法形式の判断</b><span class="muted">Chọn mẫu đúng điền vào chỗ trống</span>${sc.done ? `<span class="num">${sc.lastPct}% đúng · ${sc.done}/${sc.total} câu</span>` : `<span class="muted">${sc.total} câu · chưa làm</span>`}<button class="btn sm" data-a="grRun" data-v="GC">10 câu</button></div>
@@ -114,7 +123,7 @@ VIEWS.grammar = () => {
         ${starKeys.length ? `<div class="mdc"><b>Mẫu đã đánh dấu ★</b><span class="muted">${starKeys.length} mẫu</span><span class="muted">&nbsp;</span><button class="btn sm" data-a="grRun" data-v="star">Luyện</button></div>` : ''}
       </div>
       <p class="hint">Câu sai vào Điểm yếu và được lặp lại 1 → 3 → 7 → 21 ngày. Mẫu đánh dấu ★ hiện trong Ôn nhanh (thẻ lật, trên điện thoại).</p></section>`
-    : `<section class="panel"><h2>Ngữ pháp ${lv}: đang soạn</h2><p class="muted">Hiện đã có N5, N4, N3 và N2. N1 sẽ thêm sau. Vẫn tra cứu được các cấp khác ở dưới.</p></section>`;
+    : `<section class="panel"><h2>Ngữ pháp ${lv}: đang soạn</h2><p class="muted">Hiện đã có N5, N4, N3, N2 và N1. Vẫn tra cứu được các cấp khác ở dưới.</p></section>`;
   const kpanel = kparts.length ? `<section class="panel"><div class="ph"><h2>Bài ngữ pháp trong tài liệu</h2></div><p class="hint">Bài lấy từ tài liệu đã nhập (Dũng Mori, đề luyện…), làm ở màn hình Luyện đọc.</p>
       <div class="mdgrid">${kparts.map(({ p, n }) => { const st = typeStats('K' + p.md); return `<div class="mdc"><b lang="ja">${esc(typeName('K' + p.md))}</b><span class="muted">${esc(p.vi)} · ${n} câu</span>${st.done ? `<span class="num">${st.lastPct}% đúng</span>` : '<span class="muted">chưa làm</span>'}<button class="btn sm" data-a="rpK" data-v="${p.md}">3 bài</button></div>`; }).join('')}</div></section>` : '';
   return `<h1 class="pt">Ngữ pháp <span lang="ja">文法</span></h1>${lvSwitchHTML()}
@@ -126,7 +135,7 @@ VIEWS.grammar = () => {
     <div id="grlist" class="glist">${grListHTML()}</div></section>`;
 };
 /* Danh sách tra cứu (vẽ lại riêng khi gõ tìm, để ô tìm kiếm không mất con trỏ) */
-function grNorm(s) { return String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd'); }
+function grNorm(s) { return String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/\s+/g, ''); }   // bỏ dấu cách: gõ "をよそに" vẫn ra "を よそに"
 function grListHTML() {
   const glv = grLvNow(), lvs = glv === 'all' ? Object.keys(GRAM) : [glv], q = grNorm(GL.q.trim());
   const rows = lvs.flatMap(grList).filter(g => (GL.gr === 'all' || g.g === GL.gr) && (!q || grNorm([g.p, g.c, g.m, grPlain(g.x), g.v, g.n].join(' ')).includes(q)));
@@ -137,7 +146,7 @@ function grListHTML() {
       <div class="gcard"><p><span class="muted">Cách nối:</span> <span lang="ja">${esc(g.c)}</span></p><p class="muted">Nhóm: ${esc(GRAM_GROUPS[g.g] || '')}</p>
       <p lang="ja" class="gex">${grExHTML(g.x)} <button class="btn ghost sm" data-a="grSpeak" data-v="${esc(g.key)}" aria-label="Nghe câu ví dụ">🔊</button></p><p class="muted">${esc(g.v)}</p>
       ${g.n ? `<p class="exnote">${esc(g.n)}</p>` : ''}
-      <div class="row">${grStarBtn(g.key)}${g.lv === curLv() ? `<button class="btn sm" data-a="grOne" data-v="${esc(g.key)}">Luyện mẫu này (2 câu)</button>` : ''}</div></div></details>`;
+      <div class="row">${grStarBtn(g.key)}<button class="btn sm" data-a="grOne" data-v="${esc(g.key)}">Luyện mẫu này (2 câu)</button></div></div></details>`;
   }).join('');
 }
 AFTER.grammar = () => {
@@ -166,11 +175,15 @@ Object.assign(ACT, {
   grRun(t) {
     const v = t.dataset.v;
     if (v === 'weak') return grStart(grWeakDue().slice(0, 15), 'Câu ngữ pháp sai');
-    if (v === 'star') return grStart(shuffle(grPick('mix', 99, grList(curLv()).filter(g => grStarred(g.key)).map(g => g.key))).slice(0, 15), 'Mẫu đã đánh dấu ★');
+    if (v === 'star') return grStart(shuffle(grPick('mix', 99, grList(grPLv()).filter(g => grStarred(g.key)).map(g => g.key))).slice(0, 15), 'Mẫu đã đánh dấu ★');
     grStart(grPick(v, v === 'mix' ? 15 : 10), v === 'GC' ? '文法形式の判断' : v === 'GO' ? '文の組み立て ★' : 'Ngữ pháp trộn');
   },
-  grOne(t) { const k = t.dataset.v; GL.open = k; grStart(['gc:' + k, 'go:' + k], 'Luyện: ' + grByKey(k).p); },
-  grLv(t) { GL.lv = t.dataset.v === curLv() ? null : t.dataset.v; GL.open = null; render(); },
+  grOne(t) {
+    const k = t.dataset.v, g = grByKey(k); GL.open = k;
+    if (!ITEM['gc:' + k]) { GL.lv = g.lv === curLv() ? null : g.lv; grIndex(); }   // mẫu ở cấp khác → chuyển cấp luyện sang cấp đó
+    grStart(['gc:' + k, 'go:' + k], 'Luyện: ' + g.p);
+  },
+  grLv(t) { GL.lv = t.dataset.v === curLv() || t.dataset.v === GL.lv ? null : t.dataset.v; GL.open = null; grIndex(); render(); },
   grGr(t) { GL.gr = t.dataset.v; GL.open = null; render(); },
   grSpeak(t) { const g = grByKey(t.dataset.v); if (g) speak(grPlain(g.x)); },
   grStar(t) {
