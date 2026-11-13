@@ -418,6 +418,25 @@ code.big { display: inline-block; font-size: 1.1rem; letter-spacing: .06em; padd
 .tv { text-align: right; } .td { font-size: .8rem; }
 .sbar i.good { background: var(--good); } .sbar i.warn { background: var(--warn); } .sbar i.bad { background: var(--bad); }
 .okc { color: var(--good); font-weight: 700; } .ngc { color: var(--bad); font-weight: 700; }
+/* Ngữ pháp */
+.glist { display: flex; flex-direction: column; margin-top: 10px; }
+.grow { border-bottom: 1px solid var(--line); }
+.grow > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 10px 2px; cursor: pointer; list-style: none; }
+.grow > summary::-webkit-details-marker { display: none; }
+.grow > summary b { font-family: var(--f-jp); font-size: 1.05rem; }
+.grow[open] > summary { background: var(--ai-soft); border-radius: 8px; }
+.glv { font-size: .7rem; border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; color: var(--muted); }
+.gm { color: var(--muted); font-size: .9rem; flex: 1 1 200px; min-width: 0; }
+.gstar { color: var(--shu); } .ghist { font-size: .8rem; letter-spacing: 1px; }
+.gcard { padding: 6px 4px 14px; display: flex; flex-direction: column; gap: 6px; }
+.gcard p { margin: 0; overflow-wrap: anywhere; }
+.gex, .gcard .gp { font-size: 1.08rem; line-height: 1.7; }
+.gord { line-height: 2.3; overflow-wrap: anywhere; }
+.gslot { display: inline-block; min-width: 3.2em; margin: 0 3px; padding: 0 6px; border-bottom: 2px solid var(--ink); text-align: center; line-height: 1.6; }
+.gslot.star { border-bottom-color: var(--shu); color: var(--shu); font-weight: 700; }
+.gslot.fill { color: var(--ink); background: var(--ai-soft); border-radius: 4px 4px 0 0; }
+.gslot.star.fill { box-shadow: inset 0 -2px 0 var(--shu); }
+.glbl { margin: 0 0 6px; color: var(--muted); font-size: .88rem; }
 .plist { display: flex; flex-direction: column; }
 .pli { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: .92rem; }
 @media (max-width: 860px) {

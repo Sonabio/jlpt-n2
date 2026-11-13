@@ -10,9 +10,10 @@ function typeStats(t) {
   const nPass = t[0] === 'R' ? new Set(its.map(i => i.pid)).size : 0;
   return { t, total: its.length, done: done.length, lastPct: pct(lastOk, done.length), firstPct: pct(firstOk, done.length), avg, avgPass: nPass ? avg * its.length / nPass : 0, weak: done.filter(i => ist(i.id).weak).length, topWhy: topWhy ? topWhy[0] : null, why };
 }
-const ALL_TYPES = () => [...PARTS().filter(p => p.sec === 'K').map(p => 'K' + p.md), ...Object.keys(RTL()).map(t => 'R' + t), ...Object.keys(MDL()).map(m => 'L' + m)].filter(t => typeItems(t).length);
+const ALL_TYPES = () => [...PARTS().filter(p => p.sec === 'K').map(p => 'K' + p.md), ...Object.keys(RTL()).map(t => 'R' + t), ...Object.keys(MDL()).map(m => 'L' + m), 'GC', 'GO'].filter(t => typeItems(t).length);
 const lvlCls = p => p >= 75 ? 'good' : p >= 60 ? 'warn' : 'bad';
 function typeAct(t) {
+  if (t[0] === 'G') return { a: 'grRun', v: t };
   if (t[0] === 'K') return typeItems(t).some(i => i.kind === 'R') ? { a: 'rpK', v: t.slice(1) } : { a: 'exTypePick', v: '0:' + t.slice(1) };
   if (t[0] === 'L') return typeItems(t).some(i => i.kind === 'L') ? { a: 'lpType', v: t[1] } : { a: 'exTypePick', v: '1:' + t[1] };
   if (!typeItems(t).some(i => i.kind === 'R')) { const p = PARTS().find(x => x.rt === t.slice(1)); if (p) return { a: 'exTypePick', v: '0:' + p.md }; }
@@ -22,7 +23,7 @@ function advice() {
   const st = ALL_TYPES().map(typeStats).filter(s => s.done >= 3).sort((a, b) => a.lastPct - b.lastPct);
   const out = [], wd = weakDue();
   if (wd.length) out.push({ h: `Làm lại ${wd.length} câu sai đến hạn`, p: 'Câu sai được lặp lại 1 → 3 → 7 → 21 ngày; đúng 3 lần liền thì ra khỏi danh sách yếu.', a: 'weakGo', l: 'Làm lại' });
-  if (st[0] && st[0].lastPct < 75) { const w = st[0]; out.push({ h: `Dạng yếu nhất: ${typeVi(w.t)} (${w.lastPct}%)`, p: (w.t[0] === 'L' ? MDL()[w.t[1]].tip : w.t[0] === 'K' ? 'Luyện thêm 問題 này từ đề các năm; sai từ/ngữ pháp nào thì ôn lại bằng app/sách.' : RTL()[w.t.slice(1)].tip), ...typeAct(w.t), l: 'Luyện dạng này' }); }
+  if (st[0] && st[0].lastPct < 75) { const w = st[0]; out.push({ h: `Dạng yếu nhất: ${typeVi(w.t)} (${w.lastPct}%)`, p: (w.t[0] === 'L' ? MDL()[w.t[1]].tip : w.t[0] === 'G' ? 'Mở trang Ngữ pháp, đọc lại mẫu làm sai (cách nối + ghi chú), đánh dấu ★ để ôn trên điện thoại.' : w.t[0] === 'K' ? 'Luyện thêm 問題 này từ đề các năm; sai từ/ngữ pháp nào thì ôn lại bằng app/sách.' : RTL()[w.t.slice(1)].tip), ...typeAct(w.t), l: 'Luyện dạng này' }); }
   const why = {}; ALL_TYPES().forEach(t => Object.entries(typeStats(t).why).forEach(([k, n]) => { why[k] = (why[k] || 0) + n; }));
   const top = Object.entries(why).sort((a, b) => b[1] - a[1])[0];
   const TIP = { nghe: 'Nghe lại câu sai ở 0.85×, nhìn script, rồi nghe lại không script (shadowing 2–3 lần).', tu: 'Bôi đen từ chưa biết trong script/bài đọc và lưu thành thẻ; ôn trên điện thoại mỗi ngày.', bay: 'Khi nghe, chú ý câu sau でも/ただ/やっぱり/実は; ghi ○✕ cho từng lựa chọn đến cuối bài.', cau: 'Đọc/nghe kỹ câu hỏi: hỏi ai, hỏi lý do hay việc làm, "まず" hay "このあと".', gio: 'Đọc câu hỏi trước bài đọc; bấm giờ theo mục tiêu từng dạng, không quay lại câu khó quá 1 lần.', doan: 'Câu đoán bừa = chưa nắm; làm lại sau 1 ngày và đọc script.' };
@@ -34,7 +35,7 @@ function advice() {
   return out.slice(0, 4);
 }
 VIEWS.weak = () => {
-  if (!C) return `<h1 class="pt">Điểm yếu <span lang="ja">弱点</span></h1>` + noContent();
+  if (!C && !grList(curLv()).length) return `<h1 class="pt">Điểm yếu <span lang="ja">弱点</span></h1>` + noContent();
   const types = ALL_TYPES().map(typeStats), doneN = Object.keys(S.att).filter(id => ITEM[id]).length;
   const okN = Object.keys(S.att).filter(id => ITEM[id] && ist(id).last).length;
   const weak = Object.keys(S.att).filter(id => ITEM[id] && ist(id).weak).sort((a, b) => ist(a).dueAt - ist(b).dueAt);
@@ -56,15 +57,15 @@ VIEWS.weak = () => {
 };
 Object.assign(ACT, {
   weakGo() { startDrill(true); },
-  redo(t) { const it = ITEM[t.dataset.v]; if (it.kind === 'X') { startExam(it.exam, 'part', 0, { lis: it.lis, md: it.md }); return; } if (devMode() === 'phone') { DR = { q: [{ k: 'i', id: it.id }], i: 0, res: [], picks: [], t0: Date.now() }; go('drill'); render(); return; } if (it.kind === 'L') startListen([it.id], 'Làm lại 1 câu'); else startRead([it.pid], 'Làm lại 1 bài'); },
+  redo(t) { const it = ITEM[t.dataset.v]; if (it.kind === 'G') { if (devMode() === 'phone') { DR = { q: [{ k: 'i', id: it.id }], i: 0, res: [], picks: [], t0: Date.now() }; go('drill'); render(); } else grStart([it.id], 'Làm lại 1 câu'); return; } if (it.kind === 'X') { startExam(it.exam, 'part', 0, { lis: it.lis, md: it.md }); return; } if (devMode() === 'phone') { DR = { q: [{ k: 'i', id: it.id }], i: 0, res: [], picks: [], t0: Date.now() }; go('drill'); render(); return; } if (it.kind === 'L') startListen([it.id], 'Làm lại 1 câu'); else startRead([it.pid], 'Làm lại 1 bài'); },
 });
 
 /* ===== ÔN NHANH (điện thoại): cụm đã lưu (FSRS) + câu sai đến hạn ===== */
 let DR = null;   // { q:[{k:'p'|'i', id}], i, shown, picks, t0, done, res }
 function duePhrases() { const dn = dayNum(); return Object.keys(S.phr).filter(id => !S.phr[id].s || S.phr[id].s[0] <= dn); }
-function drillCount() { return (C ? weakDue().length : 0) + duePhrases().length; }
+function drillCount() { return weakDue().length + duePhrases().length; }
 function startDrill(onlyItems) {
-  const items = C ? weakDue().slice(0, 15).map(id => ({ k: 'i', id })) : [];
+  const items = weakDue().slice(0, 15).map(id => ({ k: 'i', id }));
   const ph = onlyItems ? [] : shuffle(duePhrases()).slice(0, 30).map(id => ({ k: 'p', id }));
   const q = [...ph, ...items]; if (!q.length) { toast('Không có gì đến hạn. Làm bài trên laptop để có thêm.'); return; }
   DR = { q, i: 0, res: [], picks: [], t0: Date.now() }; if (route !== 'drill') go('drill'); else render();
@@ -72,7 +73,7 @@ function startDrill(onlyItems) {
 VIEWS.drill = () => {
   if (DR && !DR.done) return drView();
   if (DR && DR.done) { const ok = DR.res.filter(Boolean).length; return `<section class="panel center"><div class="stamp">${pct(ok, DR.res.length)}%</div><h2>Xong ${DR.res.length} thẻ/câu</h2><div class="row center"><button class="btn" data-a="drClose">Về Ôn nhanh</button><a class="btn ghost" href="#weak">Xem điểm yếu</a></div></section>`; }
-  const dp = duePhrases().length, wi = C ? weakDue().length : 0, all = Object.keys(S.phr).length;
+  const dp = duePhrases().length, wi = weakDue().length, all = Object.keys(S.phr).length;
   return `<h1 class="pt">Ôn nhanh <span lang="ja">復習</span></h1>
   <section class="panel primary"><div class="kpis"><div><b class="num">${dp}</b><span>cụm từ đến hạn</span></div><div><b class="num">${wi}</b><span>câu sai làm lại</span></div><div><b class="num">${all}</b><span>cụm đã lưu</span></div></div>
     <button class="btn pri wide" data-a="drStart" ${dp + wi ? '' : 'disabled'}>Bắt đầu ôn (${dp + wi})</button>
@@ -82,7 +83,7 @@ VIEWS.drill = () => {
 let DR_DEL = null;
 function drView() {
   const c = DR.q[DR.i], left = DR.q.length - DR.i;
-  const top = `<div class="rv-top"><button class="btn ghost sm" data-a="drQuit">Thoát</button><span class="muted">${c.k === 'p' ? 'Cụm từ' : 'Làm lại câu sai'}</span><span class="num muted">còn ${left}</span></div><div class="rv-prog"><i style="width:${DR.i / DR.q.length * 100}%"></i></div>`;
+  const top = `<div class="rv-top"><button class="btn ghost sm" data-a="drQuit">Thoát</button><span class="muted">${c.k === 'p' ? (S.phr[c.id] && S.phr[c.id].gk ? 'Ngữ pháp' : 'Cụm từ') : 'Làm lại câu sai'}</span><span class="num muted">còn ${left}</span></div><div class="rv-prog"><i style="width:${DR.i / DR.q.length * 100}%"></i></div>`;
   if (c.k === 'p') {
     const p = S.phr[c.id]; if (!p) return top + '<section class="panel"><p class="muted">Thẻ này đã bị xóa.</p><button class="btn" data-a="drNext">Tiếp</button></section>';
     const ctx = esc(p.ctx || '').replace(esc(p.t), `<mark>${esc(p.t)}</mark>`);
@@ -92,6 +93,10 @@ function drView() {
     </section>${DR.shown ? `<div class="grades">${[[1, 'Quên'], [2, 'Khó'], [3, 'Nhớ'], [4, 'Dễ']].map(([g, l]) => `<button class="g g${g}" data-a="drGrade" data-v="${g}"><b>${l}</b></button>`).join('')}</div>` : ''}`;
   }
   const it = ITEM[c.id]; if (!it) return top + '<section class="panel"><p class="muted">Câu này không còn trong tài liệu.</p><button class="btn" data-a="drNext">Tiếp</button></section>';
+  if (it.kind === 'G') {   // câu ngữ pháp tự soạn: dùng màn hình câu hỏi của trang Ngữ pháp
+    if (!DR.gq || DR.gq.id !== it.id) DR.gq = { id: it.id, t0: Date.now() };
+    return top + `<section class="panel"><p class="muted">${esc(grLabel(it))} · lịch sử ${attempts(it.id).map(a => a[2] ? '○' : '✕').join('')}</p>${grQHTML(DR.gq)}${DR.gq.shown ? '<button class="btn pri wide" data-a="drNext">Tiếp</button>' : ''}</section>`;
+  }
   const n = it.ans.length;
   const body = it.kind === 'R' ? `<details class="panel" ${DR.shown ? '' : 'open'}><summary><b lang="ja">${esc(PASS[it.pid].type)}</b></summary>${passageHTML(PASS[it.pid])}</details><p class="lqtext" lang="ja">${esc(it.q)}</p>`
     : `<div class="row"><button class="btn" data-a="drAudio">${AU.id === it.id ? 'Đã tải bài nghe' : 'Nghe bài'}</button><button class="btn ghost" data-a="drScript">${DR.script ? 'Ẩn script' : 'Đọc script thay vì nghe'}</button></div>${AU.id === it.id ? playerHTML() : ''}
@@ -105,7 +110,7 @@ function drNext() { DR.i++; DR.shown = false; DR.picks = []; DR.script = false; 
 Object.assign(ACT, {
   drStart() { startDrill(false); },
   drFlip() { DR.shown = true; render(); },
-  drSpeak() { const p = S.phr[DR.q[DR.i].id]; speak(p.t); },
+  drSpeak() { const p = S.phr[DR.q[DR.i].id]; speak(p.gk ? p.ctx : p.t); },
   drGrade(t) { const c = DR.q[DR.i], p = S.phr[c.id], g = +t.dataset.v; p.s = sched(p.s, g); DR.res.push(g > 1); save(); if (g === 1 && DR.q.filter(x => x.id === c.id).length < 3) DR.q.push(c); drNext(); },
   drPick(t) { if (DR.shown) return; DR.picks = DR.picks || []; DR.picks[+t.dataset.k] = +t.dataset.v; const it = ITEM[DR.q[DR.i].id]; if (DR.picks.filter(Boolean).length < it.ans.length) { render(); return; } const ok = okPick(it, DR.picks); rec(it.id, DR.picks, ok, (Date.now() - DR.t0) / 1000, AU.id === it.id ? AU.plays : 0); DR.res.push(ok); DR.shown = true; render(); },
   drNext() { drNext(); },
