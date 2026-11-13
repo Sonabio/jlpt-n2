@@ -114,7 +114,7 @@ VIEWS.grammar = () => {
         ${starKeys.length ? `<div class="mdc"><b>Mẫu đã đánh dấu ★</b><span class="muted">${starKeys.length} mẫu</span><span class="muted">&nbsp;</span><button class="btn sm" data-a="grRun" data-v="star">Luyện</button></div>` : ''}
       </div>
       <p class="hint">Câu sai vào Điểm yếu và được lặp lại 1 → 3 → 7 → 21 ngày. Mẫu đánh dấu ★ hiện trong Ôn nhanh (thẻ lật, trên điện thoại).</p></section>`
-    : `<section class="panel"><h2>Ngữ pháp ${lv}: đang soạn</h2><p class="muted">Hiện đã có N5, N4 và N3. N2, N1 sẽ thêm sau. Vẫn tra cứu được các cấp khác ở dưới.</p></section>`;
+    : `<section class="panel"><h2>Ngữ pháp ${lv}: đang soạn</h2><p class="muted">Hiện đã có N5, N4, N3 và N2. N1 sẽ thêm sau. Vẫn tra cứu được các cấp khác ở dưới.</p></section>`;
   const kpanel = kparts.length ? `<section class="panel"><div class="ph"><h2>Bài ngữ pháp trong tài liệu</h2></div><p class="hint">Bài lấy từ tài liệu đã nhập (Dũng Mori, đề luyện…), làm ở màn hình Luyện đọc.</p>
       <div class="mdgrid">${kparts.map(({ p, n }) => { const st = typeStats('K' + p.md); return `<div class="mdc"><b lang="ja">${esc(typeName('K' + p.md))}</b><span class="muted">${esc(p.vi)} · ${n} câu</span>${st.done ? `<span class="num">${st.lastPct}% đúng</span>` : '<span class="muted">chưa làm</span>'}<button class="btn sm" data-a="rpK" data-v="${p.md}">3 bài</button></div>`; }).join('')}</div></section>` : '';
   return `<h1 class="pt">Ngữ pháp <span lang="ja">文法</span></h1>${lvSwitchHTML()}
