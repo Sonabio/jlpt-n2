@@ -612,7 +612,8 @@ const WHY = [['nghe', 'Không nghe kịp/không nhận ra từ'], ['tu', 'Không
 const GRAM_GROUPS = {
   tro: 'Trợ từ, câu cơ bản', dt: 'Thể động từ, trạng thái', yc: 'Nhờ, mời, cho phép, cấm, bắt buộc', mm: 'Mong muốn, ý định',
   tg: 'Thời gian, trình tự', ss: 'So sánh, mức độ', nn: 'Lý do, nguyên nhân', dk: 'Điều kiện, giả định', kn: 'Khả năng, kinh nghiệm, thay đổi',
-  cn: 'Cho – nhận', pd: 'Phỏng đoán, nghe nói, dáng vẻ', bd: 'Bị động, sai khiến', kg: 'Kính ngữ', kh: 'Khác'
+  cn: 'Cho – nhận', pd: 'Phỏng đoán, nghe nói, dáng vẻ', bd: 'Bị động, sai khiến', kg: 'Kính ngữ',
+  dl: 'Đối lập, nhượng bộ', qd: 'Quan điểm, đối tượng, phạm vi', tc: 'Tính chất, khuynh hướng', nm: 'Nhấn mạnh, cảm xúc', vn: 'Văn nói', kh: 'Khác'
 };
 const GRAM = {};
 GRAM.N5 = L(`
@@ -810,6 +811,188 @@ GRAM.N4 = L(`
 112|kh|～ように（như là）|N の / V + ように|như, giống như|{つぎの/[ように]/書いて/ください}。|Hãy viết như sau.|ような;そうに;らしく|まるで 夢の ように (như mơ).
 113|kh|～と いう こと|câu + という こと|việc (là) …|{かれが/会社を やめた/[ということ]/を知って}いますか。|Bạn có biết chuyện anh ấy nghỉ việc không?|ということに;というもの;といったの|Gói một thông tin thành danh từ.
 114|pd|～のでは ないでしょうか|thể thường + のでは ないでしょうか|chẳng phải là … sao (ý kiến mềm)|{この 計画は/少し/[むずかしい]/のでは}ないでしょうか。|Kế hoạch này chẳng phải hơi khó sao?|むずかしく;むずかしさ;むずかしくて|Nêu ý kiến một cách nhẹ nhàng, khiêm tốn.
+`);
+GRAM.N3 = L(`
+1|tg|～たとたん（に）|V た + とたん（に）|vừa … thì (ngay lập tức, bất ngờ)|{部屋に/[入った]/とたん/電話が}鳴った。|Vừa vào phòng thì điện thoại reo.|入る;入って;入っている|Vế sau là việc bất ngờ xảy ra ngoài ý muốn, không dùng cho hành động có chủ ý của người nói.
+2|tg|～最中（に）|V ている / N の + 最中（に）|đúng lúc đang …|{試験の/[最中に]/おなかが/痛くなった}。|Đúng lúc đang thi thì bị đau bụng.|とたんに;うちで;ばかりに|Việc đang diễn ra ở cao trào thì bị xen ngang.
+3|tg|～たびに|V る / N の + たびに|mỗi lần … (là lại)|{この 写真を/[見る]/たびに/子どものころを}思い出す。|Mỗi lần xem bức ảnh này tôi lại nhớ hồi bé.|見た;見て;見ない|Vế sau là việc lặp lại mỗi lần, thường là cảm xúc.
+4|tg|～て からでないと|V て + からでないと / からでなければ|nếu chưa … thì không (thể)|{よく/[考えてから]/でないと/返事は}できません。|Chưa suy nghĩ kỹ thì không thể trả lời được.|考えるから;考えたから;考えながら|Vế sau mang nghĩa phủ định: không thể, không được.
+5|tg|～ところへ／～ところに|V ている / V た / V ようとしている + ところへ|đúng lúc … thì (có người, việc đến)|{ちょうど/出かけようと している/[ところへ]/友だちが}来た。|Đúng lúc tôi định ra ngoài thì bạn đến.|ところを;ところで;ところが|Vế sau thường là 来る, 電話が かかる… làm thay đổi tình hình.
+6|tg|～て 以来|V て + 以来; N + 以来|kể từ khi … (đến nay)|{日本に/[来て]/以来/一度も}国に 帰って いない。|Kể từ khi sang Nhật, tôi chưa về nước lần nào.|来た;来る;来ても|Trạng thái kéo dài từ một mốc trong quá khứ đến nay.
+7|tg|～次第（ngay khi）|V ます (bỏ ます) + 次第|ngay sau khi … (sẽ làm)|{結果が/[わかり]/次第/ご連絡}します。|Ngay khi biết kết quả tôi sẽ liên lạc.|わかる;わかって;わかった|Lịch sự, dùng trong công việc. Vế sau là hành động có chủ ý, không dùng thì quá khứ.
+8|tg|～と ともに|V る / N + と ともに|cùng với; đồng thời|{年を/[とる]/と ともに/体力が}落ちて きた。|Cùng với tuổi tác, thể lực giảm dần.|とった;とって;とり|Văn viết. Còn nghĩa "cùng với ai": 家族と ともに 暮らす.
+9|tg|～に つれて|V る / N + に つれて|càng … thì càng (thay đổi theo)|{時間が/[たつ]/に つれて/悲しみも}うすれて いった。|Thời gian càng trôi, nỗi buồn càng phai.|たった;たって;たち|Hai vế đều là sự thay đổi dần dần. Gần nghĩa ～に したがって.
+10|tg|～に したがって|V る / N + に したがって|càng … càng; làm theo|{上に/[のぼる]/に したがって/気温が}下がる。|Càng lên cao nhiệt độ càng giảm.|のぼった;のぼって;のぼれ|Nghĩa 2 "làm theo": 説明に したがって 操作する.
+11|tc|～一方だ|V る + 一方だ|ngày càng … (một chiều, thường xấu)|{最近、/物価は/[上がる]/一方だ}。|Gần đây vật giá cứ tăng mãi.|上がった;上がって;上がり|Thay đổi chỉ theo một hướng, thường là chiều xấu.
+12|tc|～つつ ある|V ます (bỏ ます) + つつ ある|đang dần dần …|{この 町の/人口は/[減り]/つつ ある}。|Dân số thị trấn này đang giảm dần.|減る;減って;減った|Văn viết. Thay đổi đang diễn ra từng chút.
+13|kh|～ことに なって いる|V る / V ない + ことに なって いる|theo quy định là …|{この 寮では/夜10時に/[ドアを しめる]/ことに}なって いる。|Ký túc xá này quy định đóng cửa lúc 10 giờ tối.|ドアを しめた;ドアを しめて;ドアを しめよう|Quy định, lệ thường (không do mình quyết). Khác ～ことに して いる (thói quen tự đặt).
+14|kh|～ことに して いる|V る / V ない + ことに して いる|có thói quen (tự đặt ra) …|{寝る 前には/スマホを/[見ない]/ことに}して いる。|Tôi tập thói quen không xem điện thoại trước khi ngủ.|見なく;見ず;見なくて|Tự quyết định và duy trì thành thói quen.
+15|nn|～おかげで|thể thường (N の, Aな な) + おかげで|nhờ … mà (kết quả tốt)|{先生の/[おかげで]/試験に/合格}できました。|Nhờ thầy mà tôi đã đỗ kỳ thi.|せいで;くせに;ばかりに|Kết quả tốt. Kết quả xấu dùng ～せいで.
+16|nn|～せいで／～せいか|thể thường (N の, Aな な) + せいで / せいか|tại vì … (kết quả xấu) / có lẽ tại …|{寝不足の/[せいで]/仕事で/ミスを}して しまった。|Tại thiếu ngủ mà tôi mắc lỗi trong công việc.|おかげで;くせに;わりに|せいか = "có lẽ tại" (không chắc chắn).
+17|nn|～に よる（nguyên nhân）|N + に よる N / に よって|do, bởi (văn viết)|{大雨に/[よる]/事故が/増えて}いる。|Tai nạn do mưa lớn đang tăng.|よれば;ついて;とって|Văn viết, tin tức. Bổ nghĩa danh từ: ～に よる N.
+18|nn|～ものだから／～もので|thể thường (N な, Aな な) + ものだから|vì (giải thích, biện minh)|{道が/こんで いた/[ものだから]/遅れて}しまいました。|Vì đường đông nên tôi đã đến muộn.|ものなら;ものの;ものか|Dùng khi giải thích, biện hộ lý do. Văn nói: もんだから.
+19|nn|～からには|thể thường + からには|một khi đã … thì phải|{試合に/[出る]/からには/絶対に}勝ちたい。|Một khi đã ra thi đấu thì nhất định muốn thắng.|出よう;出て;出ろ|Vế sau: quyết tâm, nghĩa vụ (～たい, ～べきだ, ～つもりだ).
+20|nn|～以上（は）|thể thường + 以上（は）|vì đã … nên (đương nhiên)|{約束を/した/[以上]/守らなければ}ならない。|Đã hứa rồi thì phải giữ lời.|以下;以外;以内|Gần nghĩa ～からには. Vế sau: nghĩa vụ, quyết tâm.
+21|nn|～ばかりに|thể thường (Aな な / N である) + ばかりに|chỉ vì … mà (kết quả xấu)|{ちょっと/うそを ついた/[ばかりに]/友だちを}なくした。|Chỉ vì nói dối một chút mà mất bạn.|おかげで;たびに;うちに|Nguyên nhân nhỏ gây hậu quả lớn, tiếc nuối.
+22|nn|～ことだから|N の + ことだから|vì là (người đó) nên chắc …|{まじめな/田中さんの/[ことだから]/約束は}守るだろう。|Anh Tanaka nghiêm túc nên chắc sẽ giữ lời hứa.|ものだから;ことなら;ことには|Dựa vào tính cách quen thuộc của người đó để phán đoán.
+23|dk|～と したら／～と すれば|thể thường + と したら / と すれば|nếu giả sử …|{もし/宝くじが/[当たった]/と したら}何を 買いますか。|Giả sử trúng xổ số thì bạn mua gì?|当たって;当たり;当たれ|Giả định (có thể không có thật).
+24|dk|～さえ～ば|N さえ + V ば; V ます さえ + すれば|chỉ cần … là (đủ)|{この 薬を/飲み[さえ]/すれば/すぐ}治ります。|Chỉ cần uống thuốc này là khỏi ngay.|まで;しか;ずつ|Điều kiện duy nhất cần có. N さえ あれば: chỉ cần có N.
+25|dk|～ないことには|V ない / Aい くない + ことには|nếu không … thì (không thể)|{実際に/[やって みない]/ことには/わからない}。|Nếu không thử làm thực tế thì không biết được.|やって みる;やって みた;やって みよう|Vế sau mang nghĩa phủ định.
+26|dl|～と しても|thể thường + と しても|cho dù (giả sử) … thì cũng|{たとえ/反対された/[と しても]/私は}留学します。|Cho dù bị phản đối, tôi vẫn đi du học.|と したら;と すれば;とおりに|Hay đi với たとえ. Vế sau: ý chí không đổi.
+27|dl|～に しても／～に しろ|thể thường / N + に しても|cho dù … đi nữa|{いくら/忙しい/[に しても]/電話ぐらい}できるでしょう。|Dù bận đến đâu thì cũng gọi điện được chứ.|に しては;に とって;に 対して|にしろ, にせよ: văn viết hơn.
+28|dk|～かぎり（は）|V る / V ている / N である + かぎり|chừng nào còn … (thì)|{私が/[生きて いる]/かぎり/この 店は}続けます。|Chừng nào tôi còn sống, cửa hàng này vẫn tiếp tục.|生きた;生きて;生きよう|Hai vế cùng duy trì.
+29|dk|～ないかぎり|V ない + かぎり|chừng nào chưa / không … thì (không)|{本人が/[来ない]/かぎり/書類は}渡せません。|Chừng nào đương sự không đến thì không thể giao giấy tờ.|来なく;来ず;来ないで|Vế sau thường phủ định hoặc là kết quả xấu.
+30|kh|～と 思ったら|V た + と 思ったら|vừa mới … thì đã (ngay)|{雨が/やんだ/[と 思ったら]/また}降り出した。|Vừa tưởng mưa tạnh thì lại mưa tiếp.|と 言ったら;と したら;と すれば|Hai việc liên tiếp, bất ngờ. Không dùng cho hành động của bản thân.
+31|tg|～て はじめて|V て + はじめて|phải đến khi … mới|{病気に/[なって]/はじめて/健康の}大切さが 分かった。|Phải đến khi bị bệnh mới hiểu sức khỏe quan trọng.|なる;なった;なり|Nhận ra, hiểu ra sau một trải nghiệm.
+32|kh|～ついでに|V る / V た / N の + ついでに|nhân tiện …|{駅へ/[行く]/ついでに/手紙を}出して きます。|Nhân tiện ra ga tôi đi gửi thư luôn.|行って;行き;行こう|Việc chính ở vế trước, việc làm thêm ở vế sau.
+33|dl|～ながら（mặc dù）|V ます / Aい / Aな / N + ながら（も）|tuy … nhưng|{悪いと/[知り]/ながら/うそを}ついて しまった。|Biết là xấu mà vẫn nói dối.|知る;知って;知った|Hai vế trái ngược. Hay gặp: 残念ながら, 狭いながらも.
+34|dl|～くせに|thể thường (N の, Aな な) + くせに|vậy mà, thế mà (chê trách)|{知って いる/[くせに]/何も/教えて}くれない。|Biết rõ vậy mà chẳng chỉ cho tôi gì.|おかげで;ものだから;からには|Chỉ trích, khó chịu. Chủ ngữ hai vế giống nhau. Mạnh hơn ～のに.
+35|dl|～ものの|thể thường (Aな な / N である) + ものの|tuy … nhưng (thực tế không như mong)|{免許は/[取った]/ものの/ほとんど}運転して いない。|Tuy đã lấy bằng lái nhưng hầu như không lái xe.|取る;取って;取ろう|Văn viết. Thừa nhận vế trước nhưng vế sau không như mong đợi.
+36|dl|～にも かかわらず|thể thường / N + にも かかわらず|mặc dù … (vậy mà)|{雨/[にも かかわらず]/たくさんの 人が/集まった}。|Mặc dù mưa nhưng rất nhiều người đã tập trung.|に 関わって;に 対して;に とって|Văn viết. Vế sau là kết quả trái với dự đoán.
+37|dl|～わりに（は）|thể thường (N の, Aな な) + わりに|so với … thì (khác mong đợi)|{この 店は/値段の/[わりに]/おいしい}。|Quán này ngon so với giá tiền.|かわりに;ために;くせに|Kết quả khác với mức thông thường suy ra từ vế trước.
+38|dl|～と いっても|thể thường + と いっても|tuy nói là … nhưng (thực ra không nhiều)|{料理が/できる/[と いっても]/簡単な ものだけ}です。|Nói là biết nấu ăn nhưng chỉ món đơn giản thôi.|と いえば;と いうと;と いうより|Giải thích thêm: mức độ thực tế thấp hơn người nghe nghĩ.
+39|ss|～に しては|thể thường / N + に しては|so với (là …) thì (bất ngờ)|{初めて/作った/[に しては]/よく}できて いる。|So với lần đầu làm thì khá tốt.|に しても;に よっては;に 比べて|Đánh giá khác với tiêu chuẩn thường thấy của vế trước.
+40|ss|～ほど（mức độ）|V る / Aい / N + ほど|đến mức …|{泣きたく/なる/[ほど]/悲しい 映画}だった。|Bộ phim buồn đến mức muốn khóc.|ばかり;ずつ;しか|Gần nghĩa ～くらい.
+41|ss|～くらい／～ぐらい（mức độ）|V / Aい / N + くらい|ít nhất là …; đến mức …|{自分の 部屋/[くらい]/自分で/そうじ}しなさい。|Ít nhất phòng mình thì tự dọn đi.|ほど;ずつ;だけで|Nghĩa "ít nhất, tối thiểu" (coi là việc nhỏ) và "đến mức" (= ほど).
+42|ss|～ほど～は ない|N ほど + Aい N は ない|không có gì … bằng|{家族ほど/[大切な]/もの/は}ない。|Không có gì quan trọng bằng gia đình.|大切だ;大切で;大切に|Diễn tả "nhất". = ～が 一番 ～.
+43|ss|～くらいなら|V る + くらいなら|nếu phải … thì thà|{あの 人に/[頼む]/くらいなら/自分で}やる。|Nếu phải nhờ người đó thì thà tôi tự làm.|頼んだ;頼んで;頼め|Vế sau: thà làm cách khác (～ほうが いい, ～ほうが ましだ).
+44|ss|～に 比べて|N + に 比べて / と 比べて|so với …|{去年に/[比べて]/今年は/雪が}多い。|So với năm ngoái thì năm nay tuyết nhiều.|よって;とって;ついて|Bổ nghĩa câu, thường nói về mức độ nhiều/ít, cao/thấp.
+45|qd|～に 対して|N + に 対して|đối với (hướng tới); trái lại|{お客様に/[対して]/失礼な ことを/言っては}いけない。|Không được nói điều thất lễ với khách hàng.|とって;ついて;比べて|Nghĩa "trái lại": 兄は 背が 高いのに 対して、弟は 低い.
+46|qd|～に とって|N + に とって|đối với (ai, xét từ góc độ)|{私に/[とって]/家族は/一番}大切です。|Đối với tôi, gia đình là quan trọng nhất.|対して;ついて;よって|Đánh giá từ lập trường của N: 大切だ, 難しい… Không đi với động từ hành động.
+47|qd|～と して|N + と して|với tư cách là …|{留学生/[と して]/日本に/来ました}。|Tôi đến Nhật với tư cách du học sinh.|に とって;に ついて;に よって|～と しては = về mặt …, theo lập trường của ….
+48|qd|～に 関して|N + に 関して / に 関する N|liên quan đến, về …|{この 問題に/[関して]/ご意見を/お聞かせ}ください。|Xin hãy cho biết ý kiến về vấn đề này.|よって;とって;比べて|Trang trọng hơn ～に ついて. Bổ nghĩa danh từ: ～に 関する N.
+49|qd|～を はじめ（として）|N + を はじめ（として）|tiêu biểu là, trước tiên là …|{東京を/[はじめ]/大阪や 京都でも/コンサートを}行う。|Tổ chức hòa nhạc ở Tokyo, rồi cả Osaka và Kyoto.|こめて;問わず;もとに|Nêu ví dụ tiêu biểu nhất, sau đó đến những cái khác.
+50|qd|～を 中心に|N + を 中心に（して／として）|lấy … làm trung tâm|{この 町は/駅を/[中心に]/発展して}きた。|Thị trấn này phát triển lấy nhà ga làm trung tâm.|こめて;はじめ;通して|Cũng dùng cho người, chủ đề: 若者を 中心に 人気が ある.
+51|kh|～を こめて|N + を こめて|gửi gắm, dồn (tình cảm)|{母の ために/心を/[こめて]/セーターを}編んだ。|Tôi dồn hết tâm huyết đan áo len cho mẹ.|もとに;通して;はじめ|Đi với 心, 愛, 感謝, 願い….
+52|qd|～を 通じて／～を 通して|N + を 通じて / を 通して|thông qua …; suốt (thời gian)|{友人を/[通じて]/彼女と/知り合った}。|Tôi quen cô ấy thông qua bạn.|こめて;もとに;中心に|Nghĩa 2 "suốt cả": 一年を 通じて 暖かい.
+53|qd|～に おいて|N + に おいて / に おける N|tại, trong (văn viết, = で)|{入学式は/大ホールに/[おいて]/行われます}。|Lễ nhập học được tổ chức tại hội trường lớn.|対して;とって;ついて|Văn viết, trang trọng. Bổ nghĩa danh từ: ～に おける N.
+54|qd|～から～に かけて|N から N に かけて|từ … đến … (khoảng, không rõ ranh giới)|{今夜から/明日の 朝に/[かけて]/大雨が}降るでしょう。|Từ tối nay đến sáng mai có lẽ sẽ mưa to.|ついて;とって;よって|Khác ～から～まで: chỉ khoảng ước chừng, thời gian hoặc nơi chốn.
+55|qd|～に わたって|N (thời gian, phạm vi) + に わたって|suốt, trải dài khắp|{会議は/5時間に/[わたって]/続いた}。|Cuộc họp kéo dài suốt 5 tiếng.|かけて;ついて;対して|Nhấn mạnh phạm vi lớn: 全国に わたって.
+56|qd|～に 沿って|N + に 沿って|dọc theo; theo (kế hoạch)|{川に/[沿って]/桜の 木が/並んで}いる。|Dọc theo sông có hàng cây anh đào.|対して;とって;よって|Nghĩa 2 "theo": 計画に 沿って 進める.
+57|qd|～に 基づいて|N + に 基づいて / に 基づく N|dựa trên (căn cứ)|{この 映画は/事実に/[基づいて]/作られた}。|Bộ phim này được làm dựa trên sự thật.|対して;とって;関わって|Căn cứ chặt chẽ (luật, dữ liệu, sự thật). Khác ～を もとに (chất liệu).
+58|qd|～を もとに（して）|N + を もとに|lấy … làm nền tảng, chất liệu|{自分の 経験を/[もとに]/小説を/書いた}。|Tôi viết tiểu thuyết dựa trên trải nghiệm của mình.|こめて;はじめ;めぐって|Lấy N làm chất liệu, gợi ý để tạo ra cái mới.
+59|qd|～に 応じて|N + に 応じて / に 応じた N|tùy theo, đáp ứng theo|{レベルに/[応じて]/クラスを/選べます}。|Có thể chọn lớp tùy theo trình độ.|対して;とって;かけて|Thay đổi tương ứng với N (trình độ, nhu cầu, tuổi…).
+60|qd|～に 代わって|N + に 代わって / N に 代わり|thay cho …|{社長に/[代わって]/私が/ごあいさつ}いたします。|Tôi xin thay mặt giám đốc gửi lời chào.|とって;沿って;関して|Làm thay ai; hoặc cái mới thay cái cũ: 手紙に 代わって メールが 使われる.
+61|qd|～に 加えて|N + に 加えて|thêm vào, ngoài … ra còn|{雨に/[加えて]/風も/強く}なって きた。|Ngoài mưa ra, gió cũng mạnh dần lên.|対して;とって;沿って|Văn viết. Gần nghĩa ～だけで なく.
+62|qd|～の もとで|N + の もとで|dưới (sự chỉ đạo, điều kiện)|{田中先生の/[もとで]/研究を/続けたい}。|Tôi muốn tiếp tục nghiên cứu dưới sự hướng dẫn của thầy Tanaka.|うえで;うちで;かわりに|Dưới sự bảo hộ, chỉ đạo, ảnh hưởng của ai/cái gì.
+63|tc|～だらけ|N + だらけ|đầy, toàn là (không tốt)|{雨の 中で/遊んだので/服が/[どろだらけ]}に なった。|Chơi trong mưa nên quần áo dính đầy bùn.|どろがち;どろ気味;どろっぽい|Thường là thứ không tốt: まちがいだらけ, ほこりだらけ.
+64|tc|～っぽい|N / V ます / Aい (bỏ い) + っぽい|có vẻ, hơi giống; hay …|{あの 人は/[忘れっぽい]/から/メモを}渡して おこう。|Người đó hay quên nên đưa giấy ghi chú cho chắc.|忘れがちな;忘れ気味;忘れだらけ|Hay … (tính cách): 怒りっぽい; giống: 子どもっぽい; màu: 白っぽい.
+65|tc|～気味|N / V ます + 気味|hơi có vẻ, hơi bị …|{最近/少し/[かぜ気味]/なので}早く 寝ます。|Dạo này hơi cảm nên tôi ngủ sớm.|かぜっぽい;かぜがち;かぜだらけ|Dấu hiệu nhẹ, thường không tốt: 疲れ気味, 太り気味.
+66|tc|～がち|V ます / N + がち|hay, dễ … (xu hướng xấu)|{冬は/[かぜを ひき]/がちだから/気を}つけて ください。|Mùa đông hay bị cảm nên hãy cẩn thận.|かぜを ひく;かぜを ひいた;かぜを ひいて|Xu hướng dễ xảy ra việc không tốt: 遅れがち, 病気がち.
+67|tc|～らしい（đúng chất）|N + らしい|đúng kiểu, ra dáng …|{今日は/[春らしい]/暖かい/日です}。|Hôm nay là một ngày ấm áp đúng kiểu mùa xuân.|春そうな;春がちな;春だらけの|Khác らしい (nghe nói). Phủ định: 学生らしくない.
+68|mm|～ようと する|V (thể ý chí) + と する|định, sắp sửa (thì …)|{家を/[出ようと]/した とき/雨が}降り出した。|Đúng lúc định ra khỏi nhà thì trời bắt đầu mưa.|出ると;出たいと;出るように|Định làm nhưng có việc chen vào; hoặc cố gắng làm.
+69|mm|～ようと しない|V (thể ý chí) + と しない|không chịu …|{息子は/いくら 言っても/[勉強しようと]/しない}。|Con trai tôi nói mãi cũng không chịu học.|勉強すると;勉強したいと;勉強して|Dùng cho người khác (không dùng cho bản thân).
+70|pd|～わけだ|thể thường (Aな な / N な・である) + わけだ|thảo nào; nghĩa là (kết luận hợp lý)|{10年も/住んで いたのだから、/日本語が/上手な[わけだ]}。|Sống 10 năm rồi nên thảo nào tiếng Nhật giỏi.|ばかりだ;ところだ;ものか|Kết luận hợp lý từ sự thật đã biết. = ～はずだ (thảo nào).
+71|pd|～わけでは ない|thể thường + わけでは ない|không hẳn là …|{料理が/嫌いな/[わけでは ない]/が、}あまり 作らない。|Không phải tôi ghét nấu ăn, nhưng ít khi nấu.|わけが ない;わけに いかない;はずが ない|Phủ định một phần. = ～と いう わけでは ない.
+72|pd|～わけが ない|thể thường (Aな な / N の) + わけが ない|không thể nào …|{あんなに/練習したんだから、/[負ける]/わけが ない}。|Đã luyện tập nhiều như thế thì không thể nào thua.|負けて;負け;負けよう|= ～はずが ない. Nói mạnh, chủ quan.
+73|yc|～わけには いかない|V る + わけには いかない|không thể (vì đạo lý, hoàn cảnh)|{大事な 会議が/あるので、/休む/[わけには いかない]}。|Có cuộc họp quan trọng nên không thể nghỉ.|わけでは ない;わけが ない;ほか ない|Không phải không có khả năng, mà do trách nhiệm, đạo lý.
+74|yc|～ない わけには いかない|V ない + わけには いかない|không thể không …|{先輩に/誘われたら、/[行かない]/わけには いかない}。|Được đàn anh rủ thì không thể không đi.|行く;行かず;行かなく|Phải làm vì hoàn cảnh, đạo lý.
+75|kh|～ものだ（lẽ thường）|V る / Aい + ものだ|vốn dĩ là …; nên …|{人の 話は/最後まで/[聞く]/ものだ}。|Nghe người khác nói thì nên nghe đến hết.|聞いた;聞いて;聞こう|Lẽ thường, lời khuyên chung. Phủ định: ～ものでは ない.
+76|kh|～たものだ（hồi tưởng）|V た + ものだ|hồi trước thường hay …|{子どものころは/よく この 川で/[泳いだ]/ものだ}。|Hồi bé tôi thường hay bơi ở con sông này.|泳ぐ;泳いで;泳ごう|Hồi tưởng thói quen trong quá khứ, có cảm xúc.
+77|yc|～ことだ（lời khuyên）|V る / V ない + ことだ|nên …, tốt nhất là|{上手に なりたいなら、/毎日 日本語を/[話す]/ことだ}。|Muốn giỏi thì tốt nhất là nói tiếng Nhật mỗi ngày.|話した;話して;話そう|Lời khuyên trực tiếp, người trên nói với người dưới.
+78|yc|～ことは ない|V る + ことは ない|không cần phải …|{簡単な テストだから/そんなに/[心配する]/ことは ない}よ。|Bài kiểm tra dễ nên không cần lo đến thế đâu.|心配した;心配して;心配しない|= ～必要は ない. Dùng để động viên.
+79|nm|～ことに（cảm xúc）|V た / Aい / Aな な + ことに|thật là … (là)|{うれしい/[ことに]/友だちが/合格した}。|Thật vui là bạn tôi đã đỗ.|ものに;ことで;わけに|Văn viết. Nêu cảm xúc trước: 残念な ことに, 驚いた ことに.
+80|yc|～べきだ／～べきでは ない|V る + べきだ (する → すべき)|nên / không nên (đạo lý)|{約束は/必ず/[守る]/べきだ}。|Lời hứa thì nhất định phải giữ.|守った;守って;守ら|Ý kiến mạnh về đạo lý. Không dùng cho luật lệ (dùng ～なければ ならない).
+81|yc|～しか ない|V る + しか ない|chỉ còn cách …|{終電が ないので、/タクシーで/帰る/[しか ない]}。|Không còn chuyến tàu cuối nên chỉ còn cách về bằng taxi.|ほか ならない;わけが ない;ことは ない|Không có lựa chọn khác. = ～ほか ない.
+82|yc|～ほか ない|V る + ほか（は）ない|đành phải, chỉ còn cách|{手伝う 人が/いないから、/自分で やる/[ほか ない]}。|Không có ai giúp nên đành tự làm.|わけが ない;ことは ない;べきでは ない|Văn viết hơn ～しか ない.
+83|yc|～ざるを 得ない|V ない (bỏ ない) + ざるを 得ない|buộc phải, đành phải|{大雨なので/試合は/[中止せ]/ざるを 得ない}。|Mưa lớn nên buộc phải hủy trận đấu.|中止し;中止する;中止さ|Văn viết. Bị hoàn cảnh ép buộc. する → せざるを 得ない.
+84|pd|～に 違いない|thể thường (N, Aな bỏ だ) + に 違いない|chắc chắn là …|{電気が ついて いるから、/彼は/家に いる/[に 違いない]}。|Đèn đang sáng nên chắc chắn anh ấy ở nhà.|に すぎない;に 限る;に 決まらない|Phán đoán có căn cứ, chắc chắn. Văn viết.
+85|pd|～に 決まって いる|thể thường + に 決まって いる|chắc chắn, đương nhiên là|{毎日 練習して いる/チームが/[勝つ]/に 決まって いる}。|Đội luyện tập mỗi ngày thì chắc chắn sẽ thắng.|勝ち;勝って;勝とう|Văn nói, chủ quan hơn ～に 違いない.
+86|pd|～おそれが ある|V る / N の + おそれが ある|có nguy cơ, e là (xấu)|{台風の 影響で/電車が/[止まる]/おそれが ある}。|Do ảnh hưởng bão, tàu có nguy cơ ngừng chạy.|止まった;止まって;止まり|Văn viết, tin tức. Chỉ dùng cho việc xấu.
+87|pd|～とは 限らない|thể thường + とは 限らない|không hẳn, chưa chắc là|{値段が/高い ものが/いい/[とは 限らない]}。|Đồ đắt chưa chắc đã tốt.|ことは 限らない;とか 限らない;とは 限って|Hay đi với 必ずしも, いつも.
+88|pd|～に すぎない|N / thể thường + に すぎない|chỉ là … mà thôi|{これは/私の/個人的な 意見/[に すぎない]}。|Đây chỉ là ý kiến cá nhân của tôi mà thôi.|に すぎる;に すまない;を すぎない|Nhấn mạnh "không hơn": 冗談に すぎない.
+89|vn|～っけ|thể thường (thường quá khứ) + っけ|… nhỉ? (hỏi lại điều quên)|{あの 人の/名前、/[何だった]/っけ}。|Tên người đó là gì nhỉ?|何;何で;何だろう|Văn nói, tự hỏi hoặc hỏi lại điều mình đã quên.
+90|pd|～とか（nghe nói）|thể thường + とか|nghe nói là … (không chắc)|{来月、/駅の 前に/新しい 店が/[できるとか]}。|Nghe nói tháng sau trước ga sẽ có cửa hàng mới.|できるとは;できるとも;できるとて|Văn nói, không chắc chắn như ～そうだ.
+91|pd|～と いう ことだ（nghe nói）|thể thường + と いう ことだ|nghe nói là …|{天気予報に よると/明日は/雪が 降る/[と いう ことだ]}。|Theo dự báo thời tiết, nghe nói mai có tuyết.|と いう ものだ;と いう ばかりだ;と いう ほどだ|= ～そうだ, văn viết hơn. Còn nghĩa "tức là" (tóm lại).
+92|vn|～んだって|thể thường (N な, Aな な) + んだって|nghe nói (văn nói)|{田中さん、/来月/結婚する/[んだって]}。|Nghe nói anh Tanaka tháng sau cưới đấy.|んでって;んだけ;だって|Văn nói thân mật. Lịch sự: ～そうです.
+93|kh|～ことに なる（kết quả）|V る / V ない + ことに なる|rốt cuộc sẽ … (là)|{今 勉強しないと、/あとで/困る/[ことに なる]}よ。|Bây giờ không học thì sau này sẽ khổ đấy.|ことに する;ことに いる;ことで ある|Kết quả tất yếu. Khác N4 ～ことに なりました (được quyết định).
+94|kh|～と いうより|N / thể thường + と いうより|nói là … thì đúng hơn là …|{今日は/暖かい/[と いうより]/暑い}くらいだ。|Hôm nay nói là ấm thì đúng hơn là nóng.|と いっても;と いえば;と いうと|A と いうより B = B đúng hơn A.
+95|kh|～と いえば／～と いうと|N + と いえば / と いうと|nói đến … thì (liên tưởng)|{日本の 冬/[と いえば]/やっぱり/温泉}ですね。|Nói đến mùa đông Nhật Bản thì vẫn là suối nước nóng nhỉ.|と いっても;と いうより;と しても|Gợi ra điều liên tưởng đầu tiên.
+96|kh|～とは（định nghĩa）|N + とは|… nghĩa là (định nghĩa)|{「チン」/[とは]/電子レンジで/温める}ことです。|"Chin" nghĩa là hâm nóng bằng lò vi sóng.|とか;とも;とに|Văn viết, dùng để định nghĩa. Văn nói: ～って.
+97|kh|～と いうのは|N / câu + と いうのは|… nghĩa là, … là|{「JLPT」/[と いうのは]/日本語能力試験の/ことです}。|"JLPT" là Kỳ thi năng lực tiếng Nhật.|と いうなら;と いうから;と いうには|Cuối câu thường là ～ことだ / ～と いう 意味だ / ～からだ.
+98|nm|～て たまらない|V て / Aい くて / Aな で + たまらない|… không chịu nổi, rất …|{歯が/[痛くて]/たまらない/ので}歯医者に 行った。|Đau răng không chịu nổi nên tôi đi nha sĩ.|痛い;痛く;痛かった|Cảm giác, cảm xúc rất mạnh của người nói.
+99|nm|～て しょうがない／～て しかたが ない|V て / Aい くて / Aな で + しょうがない|… quá, không chịu được|{昨日 寝なかったので/朝から/[眠くて]/しょうがない}。|Hôm qua không ngủ nên từ sáng đã buồn ngủ không chịu được.|眠い;眠く;眠かった|Gần nghĩa ～て たまらない, văn nói hơn.
+100|nm|～て ならない|V て / Aい くて / Aな で + ならない|… vô cùng (tự nhiên trào lên)|{一人で 住む/母の ことが/[心配で]/ならない}。|Tôi lo lắng vô cùng cho mẹ sống một mình.|心配な;心配だ;心配に|Cảm xúc tự trào lên không kìm được. Văn viết hơn たまらない.
+101|nm|～ずには いられない|V ない (bỏ ない) + ずには いられない|không thể không …|{あの 映画を 見たら/だれでも/[泣か]/ずには いられない}。|Xem phim đó thì ai cũng không thể không khóc.|泣き;泣く;泣いて|する → せずには. Văn nói: ～ないでは いられない.
+102|nm|～ばかりか|thể thường (N, Aな な) + ばかりか|không những … mà còn|{彼は/英語/[ばかりか]/中国語も}話せる。|Anh ấy không những nói được tiếng Anh mà cả tiếng Trung.|ばかりに;ばかりで;だけに|Vế sau thường có も, まで, さえ. = ～ばかりで なく.
+103|nm|～は もちろん|N + は もちろん|… thì đương nhiên rồi, (cả) …|{この 店は/味/[は もちろん]/サービスも}いい。|Quán này vị thì khỏi nói, dịch vụ cũng tốt.|は べつに;は もちろ;を もちろん|Vế sau có も. Gần nghĩa ～は もとより (N2).
+104|nm|～さえ（ngay cả）|N (+ trợ từ) + さえ|ngay cả …|{忙しくて/昼ご飯を/食べる 時間/[さえ]}ない。|Bận đến mức ngay cả thời gian ăn trưa cũng không có.|ずつ;ほど;ばかりか|Nêu ví dụ cực đoan. Văn viết: ～すら.
+105|nm|～まで（ngay cả）|N + まで|đến cả, ngay cả|{親友に/[まで]/うそを/つかれた}。|Đến cả bạn thân cũng nói dối tôi.|しか;ずつ;ほど|Vượt quá mức bình thường, bất ngờ.
+106|nm|～こそ|N + こそ|chính … (nhấn mạnh)|{今度/[こそ]/試験に/合格する}ぞ。|Lần này nhất định sẽ đỗ!|さえ;まで;しか|～から こそ = chính vì. こちらこそ = chính tôi mới phải.
+107|nm|～なんか／～など／～なんて|N + なんか / など / なんて|… như là (coi nhẹ)|{ゲーム/[なんか]/やめて/早く}寝なさい。|Bỏ cái trò game đi, mau đi ngủ.|ずつ;ほど;ばかりか|Coi thường hoặc khiêm tốn: 私なんか まだまだ. なんて: ngạc nhiên.
+108|cn|～て もらいたい／～て いただきたい|V て + もらいたい / いただきたい|muốn (ai) làm cho|{この 書類を/明日までに/[見て]/いただきたい}のですが。|Tôi muốn anh xem giúp tài liệu này trước ngày mai.|見る;見た;見よう|Lịch sự hơn ～て ほしい.
+109|kg|～させて いただく|V (sai khiến) て + いただく|xin phép được …|{体調が 悪いので、/今日は/[休ませて]/いただきます}。|Vì không khỏe, hôm nay tôi xin phép được nghỉ.|休んで;休まれて;休めて|Khiêm nhường: làm việc của mình với sự cho phép của đối phương.
+110|kg|～て いただけないでしょうか|V て + いただけないでしょうか|có thể … giúp tôi được không ạ|{すみません、/もう 少し/[ゆっくり 話して]/いただけないでしょうか}。|Xin lỗi, anh có thể nói chậm hơn một chút được không ạ?|ゆっくり 話す;ゆっくり 話した;ゆっくり 話そう|Nhờ vả rất lịch sự. Kém hơn: ～て もらえませんか.
+111|tg|～おきに|số lượng + おきに|cứ cách … (một lần)|{この バスは/15分/[おきに]/出て}います。|Xe buýt này cứ 15 phút có một chuyến.|ずつ;ごとで;ぶりに|1日おきに = cách 1 ngày (ngày có ngày không). Khác ～ごとに.
+112|tg|～ごとに|N / V る + ごとに|mỗi …|{オリンピックは/4年/[ごとに]/開かれる}。|Thế vận hội được tổ chức 4 năm một lần.|ぶりに;ずつに;ばかりに|会う ごとに = mỗi lần gặp (= たびに).
+113|tc|～たて|V ます (bỏ ます) + たて|vừa mới … xong (còn mới)|{焼き[たて]の/パンは/とても/おいしい}。|Bánh mì vừa nướng xong rất ngon.|ぶり;がち;だらけ|生まれたて, ペンキ塗りたて.
+114|tc|～かけ（の）|V ます (bỏ ます) + かけの N / かける|đang … dở|{テーブルの 上に/[読みかけ]の/本が/置いて}ある。|Trên bàn có quyển sách đang đọc dở.|読みたて;読みっぽい;読みがち|Làm dở, chưa xong: 食べかけ, 言いかける.
+115|kn|～きる／～きれない|V ます + きる / きれない|làm hết, trọn vẹn / không thể hết|{料理が/多すぎて/一人では/[食べきれない]}。|Món ăn nhiều quá, một mình ăn không hết.|食べかけない;食べたてない;食べつつない|使いきる (dùng hết), 走りきる (chạy đến cùng).
+116|kn|～直す|V ます + 直す|làm lại|{答えが/まちがって いたので/もう一度/[計算し直した]}。|Đáp án sai nên tôi đã tính lại một lần nữa.|計算しきった;計算しかけた;計算したてた|書き直す, やり直す, 考え直す.
+117|kn|～合う|V ます + 合う|làm cùng nhau, lẫn nhau|{困った ときは/みんなで/[助け合い]/ましょう}。|Khi khó khăn hãy cùng giúp đỡ lẫn nhau.|助けかけ;助け直し;助けたて|話し合う, 愛し合う, 見つめ合う.
+118|kn|～込む|V ます + 込む|vào trong; (làm) kỹ, sâu|{発車 直前の/電車に/[かけ込む]/のは}危ないです。|Lao vào tàu ngay trước khi tàu chạy thì nguy hiểm.|かけ合う;かけ直す;かけきる|Còn nghĩa "làm kỹ": 煮込む, 話し込む.
+119|kn|～ようが ない|V ます (bỏ ます) + ようが ない|không có cách nào …|{こんなに/こわれて いたら、/もう/[直しようが ない]}。|Hỏng đến thế này thì không còn cách nào sửa.|直しかけない;直しきれる;直しがちない|= ～方法が ない.
+120|kn|～得る／～得ない|V ます + 得る (うる/える) / 得ない|có thể / không thể (xảy ra)|{そんな ことは/[あり得ない]/と/思う}。|Tôi nghĩ chuyện như vậy không thể có.|ありきれない;ありがちない;ありかけない|Văn viết. Hay gặp: あり得る (có thể xảy ra), あり得ない.
+121|tc|～っぱなし|V ます + っぱなし|để nguyên (bỏ mặc); liên tục|{電気を/[つけっぱなし]/で/寝て}しまった。|Tôi lỡ ngủ mà để đèn sáng nguyên.|つけたて;つけかけ;つけぎみ|Nghĩa 2 "liên tục": 立ちっぱなし (đứng suốt).
+122|mm|～ますように|V ます + ように|mong sao, cầu mong|{明日は/どうか/[晴れます]/ように}。|Cầu mong ngày mai trời nắng.|晴れて;晴れた;晴れよう|Lời cầu nguyện, chúc: 合格できますように.
+123|nn|～ことから|thể thường (Aな な/である, N である) + ことから|từ việc … (căn cứ, nguồn gốc)|{富士山が/見える/[ことから]/この 町は}富士見町と 呼ばれる。|Vì nhìn thấy núi Phú Sĩ nên thị trấn này được gọi là Fujimi.|ことだから;ことには;ことなく|Văn viết. Nêu căn cứ, nguồn gốc tên gọi.
+124|dl|～からと いって|thể thường + からと いって|không phải cứ vì … mà|{お金が/ある/[からと いって]/幸せだ}とは 限らない。|Không phải cứ có tiền là hạnh phúc.|からには;からこそ;からして|Vế sau là phủ định: ～とは 限らない, ～わけでは ない.
+125|qd|～から すると／～から 見ると|N + から すると / から 見ると|nhìn từ góc độ …|{親/[から すると]/子どもは/いつまでも}子どもだ。|Từ góc độ cha mẹ, con cái mãi là con nít.|から ついて;で すると;に みると|Đánh giá từ lập trường của N.
+126|qd|～向け|N + 向け（の N / に）|dành cho (đối tượng)|{これは/[子ども向け]/の/番組}です。|Đây là chương trình dành cho trẻ em.|子どもらしい;子どもだらけ;子どもがち|Làm ra nhằm cho N. Khác ～向き (phù hợp với).
+127|qd|～向き|N + 向き（の N / だ）|phù hợp với …|{この 料理は/辛くないので/[子ども向き]/です}。|Món này không cay nên hợp với trẻ em.|子どもだらけ;子どもがち;子ども気味|Vốn phù hợp với N (dù không làm riêng cho N).
+128|dl|～反面|thể thường (Aな な/である, N である) + 反面|mặt khác, ngược lại|{都会の 生活は/便利な/[反面]/ストレスも}多い。|Cuộc sống đô thị tiện lợi, mặt khác cũng nhiều căng thẳng.|くせに;おかげで;ことに|Một sự việc có hai mặt trái ngược.
+129|dl|～一方（で）|thể thường + 一方（で）|mặt khác; trong khi đó|{兄は/スポーツが 得意な/[一方で]/弟は}本が 好きだ。|Anh trai giỏi thể thao, trong khi đó em trai thích sách.|くせに;わりに;うちに|So sánh hai sự việc đối lập.
+130|dl|～かわりに|V / N の + かわりに|thay vì; đổi lại|{肉の/[かわりに]/豆腐を/使った}。|Tôi dùng đậu phụ thay cho thịt.|わりに;うえに;くせに|Nghĩa "đổi lại": 手伝う かわりに ご飯を おごって.
+131|dl|～に 反して|N + に 反して / に 反する N|trái với …|{予想に/[反して]/試合は/負けて}しまった。|Trái với dự đoán, trận đấu đã thua.|沿って;応じて;基づいて|Đi với 予想, 期待, 意志, 規則….
+132|dl|～どころか|thể thường (N, Aな) + どころか|chẳng những không … mà ngược lại|{彼は/謝る/[どころか]/怒り}出した。|Anh ta chẳng những không xin lỗi mà còn nổi giận.|ところが;どころで;ことか|Thực tế ngược hẳn với điều được nghĩ.
+133|dl|～どころでは ない|V る / N + どころでは ない|không phải lúc để …|{仕事が/忙しくて、/旅行/[どころでは ない]}。|Công việc bận đến mức không phải lúc đi du lịch.|どころか ない;ところでは ない;ことでは ない|Hoàn cảnh không cho phép làm việc đó.
+134|tg|～た つもり|V た + つもり|cứ ngỡ là đã …|{かぎを/[かけた]/つもりだったが、/かかって}いなかった。|Tôi cứ ngỡ là đã khóa cửa nhưng hóa ra chưa.|かけて;かけよう;かけろ|Khác ～つもりだ (dự định). Còn nghĩa "coi như": 旅行した つもりで 貯金する.
+135|kh|～ずに すむ／～ないで すむ|V ない (bỏ ない) + ずに すむ|không phải … cũng xong|{友だちが 送って くれたので、/駅まで/[歩かずに]/すんだ}。|Bạn đưa đi nên tôi không phải đi bộ ra ga.|歩かず;歩くに;歩かなく|～て すむ = chỉ cần … là xong.
+136|tg|～きり|V た + きり|từ khi … rồi (không …)|{朝/出かけた/[きり]/まだ 帰って}こない。|Sáng ra ngoài rồi đến giờ vẫn chưa về.|ばかり;ずつ;ほど|Nghĩa 2 "chỉ": 二人きり.
+137|kh|～だけ（hết mức）|V る / V たい + だけ|… hết mức (tùy thích)|{好きな/[だけ]/食べて/ください}。|Hãy ăn bao nhiêu tùy thích.|ばかり;ずつ;しか|できる だけ = hết sức có thể.
+138|bd|～れる／～られる（tự phát）|V (thể bị động)|tự nhiên cảm thấy …|{この 写真を 見ると、/昔の ことが/[思い出され]/ます}。|Nhìn bức ảnh này, chuyện ngày xưa tự nhiên hiện về.|思い出させ;思い出して;思い出し|Tự phát: 感じられる, 思われる, 案じられる.
+139|kh|～て みせる|V て + みせる|nhất định sẽ … (cho xem)|{次の 試験では/必ず/[合格して]/みせる}。|Kỳ thi sau tôi nhất định sẽ đỗ cho xem.|合格する;合格した;合格しよう|Thể hiện quyết tâm mạnh. Nghĩa 2: làm mẫu cho xem.
+140|kh|～ふりを する|V / Aい / Aな な / N の + ふりを する|giả vờ …|{弟は/呼ばれても/聞こえない/[ふりを]}して いる。|Em trai bị gọi cũng giả vờ không nghe thấy.|ようを;そうを;らしいを|知らない ふり, 寝た ふり.
+141|vn|～ちゃ／～じゃ（～ては）|V ては → ちゃ / では → じゃ|(văn nói của ～ては)|{ここで/たばこを/[吸っちゃ]/だめ}だよ。|Không được hút thuốc ở đây đâu.|吸っちゃう;吸っとく;吸ってる|～ては いけない → ～ちゃ いけない / ～ちゃ だめ.
+142|vn|～なきゃ／～なくちゃ|V ない (bỏ い) + きゃ / くちゃ|phải … (văn nói)|{もう 9時だ。/早く/会社に/[行かなきゃ]}。|9 giờ rồi. Phải đi làm nhanh thôi.|行かなきゃう;行きなきゃ;行かないきゃ|= ～なければ / ～なくては (ならない).
+143|vn|～もん／～もの（lý do）|thể thường + もん / もの|vì … mà (biện bạch, văn nói)|{だって/まだ/子どもなんだ/[もん]}。|Thì tại vì tôi còn là trẻ con mà.|こと;わけ;ばかり|Hay đi với だって. Văn nói thân mật.
+144|vn|～じゃない（xác nhận）|thể thường + じゃない|chẳng phải … sao, … còn gì|{ほら、/やっぱり/雨が/[降って きたじゃない]}。|Đó, thấy chưa, mưa rồi còn gì.|降って きてじゃない;降って くるじゃないで;降って きたじゃなく|Lên giọng khi xác nhận; xuống giọng khi trách.
+145|vn|～かな／～かしら|thể thường (N, Aな) + かな / かしら|… không nhỉ (tự hỏi)|{田中さん、/今日の パーティーに/来る/[かな]}。|Anh Tanaka có đến bữa tiệc hôm nay không nhỉ?|わけ;ばかり;ずつ|かしら: nữ giới hay dùng.
+146|tg|～と 同時に|V る / N + と 同時に|cùng lúc với …|{ドアが/開く/[と 同時に]/子どもたちが}走り出した。|Cửa vừa mở thì cùng lúc bọn trẻ chạy ùa ra.|と 一緒で;と 同じに;と 以来|Còn nghĩa "đồng thời là": 歌手で ある と 同時に 俳優でも ある.
+147|tg|～た 上で|V た / N の + 上で|sau khi … (rồi mới)|{家族と/[相談した]/上で/お返事}します。|Sau khi bàn với gia đình tôi sẽ trả lời.|相談して;相談しよう;相談し|Làm A trước, dựa vào kết quả đó mới làm B.
+148|qd|～に 限って|N + に 限って|riêng … thì (lại)|{急いで いる 日/[に 限って]/電車が/遅れる}。|Đúng những hôm đang vội thì tàu lại trễ.|に 限らず;に 比べて;に とって|Còn nghĩa "riêng N thì không thể": うちの 子に 限って….
+149|qd|～に 限らず|N + に 限らず|không chỉ … (mà cả)|{この 歌は/若者/[に 限らず]/お年寄りにも}人気が ある。|Bài hát này không chỉ giới trẻ mà cả người già cũng thích.|に 限って;に とって;に 対して|Vế sau thường có も.
+150|kh|～を きっかけに|N + を きっかけに（して）|nhân dịp, nhờ … mà bắt đầu|{留学を/[きっかけに]/日本の/文化に}興味を 持った。|Nhân dịp du học tôi bắt đầu quan tâm văn hóa Nhật.|こめて;中心に;もとに|Sự kiện làm khởi đầu cho thay đổi.
+151|tg|～ぶり|thời gian + ぶり（に／の）|sau (khoảng thời gian) mới lại|{5年/[ぶりに]/国へ/帰った}。|Sau 5 năm tôi mới lại về nước.|ずつに;ばかりに;ほどに|Nghĩa 2 "cách, dáng": 仕事ぶり.
+152|kh|～ように（nhắc nhở）|V る / V ない + ように|hãy … (thông báo, nhắc nhở)|{明日は/8時までに/[集まる]/ように}。|Ngày mai hãy tập trung trước 8 giờ.|集まった;集まって;集まろう|Dùng trong thông báo, lược bỏ してください.
+153|kg|～で いらっしゃる|N + で いらっしゃる|là (tôn kính của ～です)|{失礼ですが、/田中様/[でいらっしゃいます]/か}。|Xin lỗi, có phải ngài Tanaka không ạ?|でございます;でおります;でまいります|Tôn kính, dùng cho người. ～で ございます dùng cho vật hoặc bản thân.
+154|kg|お／ご～ください|お V ます / ご N + ください|xin hãy … (tôn kính)|{こちらで/少々/[お待ち]/ください}。|Xin vui lòng đợi một chút ở đây.|お待って;お待ちて;待ちし|ご注意ください, ご覧ください.
+155|kg|お／ご～願う|お V ます / ご N + 願います|xin (quý khách) vui lòng …|{会場内では/たばこは/[ご遠慮]/願います}。|Xin vui lòng không hút thuốc trong hội trường.|ご遠慮して;お遠慮;遠慮し|Dùng trong thông báo, biển báo.
+156|kg|ご～いたす|お V ます / ご N + いたす|tôi xin (làm) (khiêm nhường)|{会場まで/私が/[ご案内]/いたします}。|Tôi xin dẫn đường đến hội trường.|ご案内に;案内して;お案内|Khiêm nhường hơn お～します.
+157|kh|～ないことは ない|V ない / Aい くない + ことは ない|không phải là không …|{辛い 料理も/[食べられない]/ことは ない/けど、}あまり 好きでは ない。|Món cay thì không phải là không ăn được, nhưng tôi không thích lắm.|食べられなく;食べられず;食べられないで|Khẳng định yếu, có phần miễn cưỡng.
+158|kh|～ことは～が|V る ことは V る が|… thì có … nhưng|{行く/[ことは]/行くが/すぐ}帰るよ。|Đi thì có đi, nhưng sẽ về ngay.|ものは;わけは;ほどは|Thừa nhận nhưng có hạn chế.
+159|kh|～ば～のに（tiếc）|V ば + よかったのに|giá mà … thì đã|{もっと 早く/[言って くれれば]/よかった/のに}。|Giá mà nói sớm hơn thì tốt rồi.|言って くれて;言って くれる;言って くれよう|Tiếc nuối, trách nhẹ người khác.
+160|pd|～かのように|thể thường + かのように / かのようだ|cứ như thể là … (thực ra không phải)|{彼は/何も なかった/[かのように]/笑って}いた。|Anh ấy cười như thể chẳng có chuyện gì xảy ra.|そうに;らしいに;かように|Ví von điều không có thật.
+161|tc|～げ|Aい (bỏ い) / Aな + げ|có vẻ … (dáng vẻ)|{子どもたちは/[楽しげに]/歌を/歌って}いる。|Bọn trẻ đang hát có vẻ vui.|楽しっぽく;楽しがちに;楽しだらけに|Văn viết. 悲しげ, 寂しげ, 不安げ.
+162|kh|～ばかりで|V る + ばかりで|chỉ toàn … (mà không làm gì)|{彼は/文句を/[言う]/ばかりで}何も しない。|Anh ta chỉ toàn phàn nàn mà chẳng làm gì.|言って;言おう;言え|Chê trách: chỉ làm một việc, không làm việc cần làm.
+163|ss|～ほど（càng … càng）|V る / Aい / N + ほど|càng … càng|{日本語は/勉強する/[ほど]/おもしろく}なる。|Tiếng Nhật càng học càng thấy hay.|ばかり;ずつ;まで|Lược bỏ ～ば của ～ば～ほど.
+164|nm|～ものか|thể thường + ものか|… đời nào! (phủ định mạnh)|{あんな 店、/二度と/[行く]/ものか}。|Quán như thế, đời nào tôi đến lần nữa!|行った;行って;行こう|Văn nói: もんか.
+165|qd|～に 当たって|V る / N + に 当たって|khi, nhân dịp (sự kiện quan trọng)|{新しい 生活を/[始める]/に 当たって/準備を}しっかり した。|Khi bắt đầu cuộc sống mới, tôi đã chuẩn bị kỹ.|始めた;始めて;始めよう|Trang trọng, trước sự kiện quan trọng.
+166|qd|～を 問わず|N + を 問わず|bất kể, không phân biệt|{この 仕事は/年齢/[を 問わず]/だれでも}応募できます。|Công việc này ai cũng ứng tuyển được, không kể tuổi tác.|を こめて;を もとに;を 中心に|Hay đi với cặp từ: 男女を 問わず, 昼夜を 問わず.
+167|nn|～から こそ|thể thường + から こそ|chính vì … nên|{あなたの ことを/心配して いる/[から こそ]/言うんです}。|Chính vì lo cho bạn nên tôi mới nói.|からには;からと いって;からして|Nhấn mạnh lý do.
+168|tc|～ばかりだ（ngày càng xấu）|V る + ばかりだ|ngày càng (xấu đi)|{病気は/悪く/[なる]/ばかりだ}。|Bệnh ngày càng xấu đi.|なって;なれ;なろう|= ～一方だ, chỉ dùng chiều xấu.
+169|tg|～ところだった|V る + ところだった|suýt nữa thì …|{もう 少しで/車に/[ひかれる]/ところだった}。|Suýt chút nữa thì bị xe tông.|ひかれた;ひかれて;ひかれよう|Hay đi với もう 少しで, 危うく.
+170|kh|～気が する|thể thường + 気が する|có cảm giác là …|{この 人に/どこかで/[会った]/気が する}。|Tôi có cảm giác đã gặp người này ở đâu đó.|会って;会おう;会え|Cảm giác không chắc chắn.
+171|kh|～ば いいのに|V ば + いいのに|giá mà … thì tốt (khuyên người khác)|{そんなに 疲れて いるなら、/早く/[帰れば]/いいのに}。|Mệt thế thì về sớm có phải hơn không.|帰って;帰ろう;帰れ|Khuyên, tiếc thay cho người khác.
+172|qd|～上（じょう）／～の 上では|N + 上 / の 上では|về mặt …|{カレンダーの/[上では]/もう 春だが、/まだ}寒い。|Theo lịch thì đã sang xuân nhưng vẫn còn lạnh.|うちでは;ままでは;ほどでは|法律上, 健康上, 表面上 (về mặt pháp luật, sức khỏe, bề ngoài).
+173|kh|～は 別として|N + は 別として|… thì khoan bàn, ngoài … ra|{値段/[は 別として]/デザインは/とても}いい。|Giá cả khoan bàn, thiết kế rất đẹp.|に 別として;で 別として;が 別として|= ～は ともかく (N2).
+174|tc|～風（ふう）|N + 風|kiểu, phong cách …|{この 店は/[和風]の/料理が/人気}です。|Quán này nổi tiếng với món ăn kiểu Nhật.|和っぽい;和がち;和らしい|洋風 (kiểu Tây), 中華風. こういう 風に = như thế này.
+175|pd|～ように 見える|V / Aい / Aな な / N の + ように 見える|trông có vẻ …|{彼は/年より/[若い]/ように 見える}。|Anh ấy trông trẻ hơn tuổi.|若く;若くて;若さ|Nhận xét theo vẻ bề ngoài.
+176|kh|～だけで|V る + だけで|chỉ cần … thôi là|{あの 曲を/[聞く]/だけで/元気に}なる。|Chỉ cần nghe bài đó thôi là tôi khỏe ra.|聞いて;聞こう;聞け|Chỉ một việc nhỏ cũng đủ tạo kết quả.
+177|kh|～に つき|N + に つき|vì … (thông báo); mỗi|{本日は/定休日/[に つき]/休業}いたします。|Hôm nay là ngày nghỉ định kỳ nên cửa hàng đóng cửa.|に ついて;に とって;に 対して|Văn thông báo, biển báo. Nghĩa 2 "mỗi": 1人に つき 1枚.
+178|kh|～て ばかり いる|V て + ばかり いる|chỉ toàn … (chê)|{弟は/毎日/ゲームを/[して ばかり]}いる。|Em trai ngày nào cũng chỉ toàn chơi game.|して ほど;して ずつ;して しか|Lặp lại một việc, người nói không hài lòng.
+179|nm|～も～ば～も|N も V ば N も|vừa … vừa …|{この 部屋は/駅にも/近ければ/[家賃も]}安い。|Căn phòng này vừa gần ga, giá thuê vừa rẻ.|家賃しか;家賃ほど;家賃ずつ|Liệt kê hai điểm cùng chiều (tốt cùng tốt, xấu cùng xấu).
+180|qd|～に したら／～に すれば|N (người) + に したら|đối với (đứng ở vị trí) …|{子ども/[に したら]/大人の 話は/つまらない}だろう。|Đứng ở vị trí trẻ con thì chuyện người lớn chắc chán lắm.|に しては;で したら;を したら|Đoán cảm nghĩ của người khác.
 `);
 /* ===== UTIL ===== */
 const $ = (s, r = document) => r.querySelector(s);
@@ -2263,7 +2446,7 @@ VIEWS.grammar = () => {
         ${starKeys.length ? `<div class="mdc"><b>Mẫu đã đánh dấu ★</b><span class="muted">${starKeys.length} mẫu</span><span class="muted">&nbsp;</span><button class="btn sm" data-a="grRun" data-v="star">Luyện</button></div>` : ''}
       </div>
       <p class="hint">Câu sai vào Điểm yếu và được lặp lại 1 → 3 → 7 → 21 ngày. Mẫu đánh dấu ★ hiện trong Ôn nhanh (thẻ lật, trên điện thoại).</p></section>`
-    : `<section class="panel"><h2>Ngữ pháp ${lv}: đang soạn</h2><p class="muted">Hiện đã có N5 và N4. N3, N2, N1 sẽ thêm sau. Vẫn tra cứu được các cấp khác ở dưới.</p></section>`;
+    : `<section class="panel"><h2>Ngữ pháp ${lv}: đang soạn</h2><p class="muted">Hiện đã có N5, N4 và N3. N2, N1 sẽ thêm sau. Vẫn tra cứu được các cấp khác ở dưới.</p></section>`;
   const kpanel = kparts.length ? `<section class="panel"><div class="ph"><h2>Bài ngữ pháp trong tài liệu</h2></div><p class="hint">Bài lấy từ tài liệu đã nhập (Dũng Mori, đề luyện…), làm ở màn hình Luyện đọc.</p>
       <div class="mdgrid">${kparts.map(({ p, n }) => { const st = typeStats('K' + p.md); return `<div class="mdc"><b lang="ja">${esc(typeName('K' + p.md))}</b><span class="muted">${esc(p.vi)} · ${n} câu</span>${st.done ? `<span class="num">${st.lastPct}% đúng</span>` : '<span class="muted">chưa làm</span>'}<button class="btn sm" data-a="rpK" data-v="${p.md}">3 bài</button></div>`; }).join('')}</div></section>` : '';
   return `<h1 class="pt">Ngữ pháp <span lang="ja">文法</span></h1>${lvSwitchHTML()}
