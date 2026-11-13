@@ -1,7 +1,8 @@
 /* ===== NỘI DUNG BÀI TẬP (lưu riêng trên D1, chỉ máy đã ghép mới tải được) =====
-   Bốn kho: 'main' = tài liệu N2; 'n345' = đề chính thức + bài luyện N3–N5; 'dm' = bài luyện khóa Dũng Mori (N3, N2); 'n3de' = 26 đề luyện N3 (文字語彙・文法・読解).
+   Năm kho: 'main' = tài liệu N2; 'n345' = đề chính thức + bài luyện N3–N5; 'dm' = bài luyện khóa Dũng Mori (N5–N2); 'n3de' = 26 đề luyện N3 (文字語彙・文法・読解);
+   'n4de' = 12 đề N4 thật các năm + Luyện đề N4-01 (thư mục N4_ĐỀ CÁC NĂM).
    Mỗi bộ/đề có lv; C là phần của cấp đang luyện. */
-const SLOTS = ['main', 'n345', 'dm', 'n3de'];
+const SLOTS = ['main', 'n345', 'dm', 'n3de', 'n4de'];
 const CK = k => 'jlpt-n2-content' + (k === 'main' ? '' : '-' + k);
 const CS = {};                // slot → { sets, exams, upd }
 let C = null;                 // { sets, exams } của cấp đang luyện (null nếu cấp này chưa có gì)
@@ -150,7 +151,9 @@ function exFiles(e) {
   const out = [];
   if (Array.isArray(e.pdf)) e.pdf.forEach((rel, i) => out.push(['p' + i, rel, 'application/pdf'])); else out.push(['p', e.pdf, 'application/pdf']);
   if (e.script) out.push(['s', e.script, 'application/pdf']);
-  if (Array.isArray(e.mp3)) e.mp3.forEach((rel, i) => out.push(['a' + (i + 1), rel, 'audio/mpeg'])); else out.push(['a', e.mp3, 'audio/mpeg']);
+  // file nghe: .m4a (một số đề N4) báo đúng loại để trình duyệt phát được; đề không có file nghe (N4 7/2026) thì bỏ
+  const au = rel => /\.m4a$/i.test(rel) ? 'audio/mp4' : 'audio/mpeg';
+  if (Array.isArray(e.mp3)) e.mp3.forEach((rel, i) => out.push(['a' + (i + 1), rel, au(rel)])); else if (e.mp3) out.push(['a', e.mp3, au(e.mp3)]);
   return out;
 }
 let MTOK = null;
@@ -246,7 +249,7 @@ function importUI() {
     ${any ? `<p class="hint"><b>Trên máy này (dùng được khi không có mạng):</b> ${audLocal}/${nAudio} file nghe bài tập${nEx ? ` · ${exLocal}/${nEx} đề đủ file` : ''}${est && est.used ? ` · chiếm ${fmtMB(est.used)}${est.persisted ? ' · đã khóa không cho trình duyệt tự xóa' : ''}` : ''}.</p>` : ''}
     <label class="btn ${any ? '' : 'pri'}" ${IMP.busy ? 'aria-disabled="true"' : ''}>Chọn thư mục tài liệu…<input type="file" id="impdir" webkitdirectory directory multiple hidden data-a="impPick" ${IMP.busy ? 'disabled' : ''}></label>
     ${CF.cfg ? `<label class="hint"><input type="checkbox" data-a="impCloud" ${IMP.cloud ? 'checked' : ''}> Cũng tải file nghe/đề lên cloud (chỉ cần khi cài máy mới; chậm)</label>` : ''}
-    <p class="hint">Trên laptop chọn thư mục chứa tài liệu (có file content-….json), ví dụ <b>N2_ĐỀ CÁC NĂM</b>, <b>2.DMR-TÀI LIỆU HỌC VIÊN</b>, <b>JLPT_CHINH_THUC_N3-N5</b>, <b>Dung mori</b>, <b>N3_26_DE</b>; hoặc chọn một thư mục cha chứa tất cả. File đã có sẽ được bỏ qua. Không cần mạng.</p>
+    <p class="hint">Trên laptop chọn thư mục chứa tài liệu (có file content-….json), ví dụ <b>N2_ĐỀ CÁC NĂM</b>, <b>2.DMR-TÀI LIỆU HỌC VIÊN</b>, <b>JLPT_CHINH_THUC_N3-N5</b>, <b>Dung mori</b>, <b>N3_26_DE</b>, <b>N4_ĐỀ CÁC NĂM</b>; hoặc chọn một thư mục cha chứa tất cả. File đã có sẽ được bỏ qua. Không cần mạng.</p>
     ${IMP.have ? `<p class="hint">Trên cloud: ${[...IMP.have].filter(x => x[0] !== 'x').length}/${nAudio} file nghe bài tập${nEx ? ` · ${exCloud}/${nEx} đề đủ file` : ''}.</p>` : ''}
     ${IMP.msg ? `<p id="impmsg" class="${IMP.msg.startsWith('Lỗi') ? 'bad-t' : ''}">${esc(IMP.msg)}</p>` : ''}
     ${any ? `<div class="row">${CF.cfg ? '<button class="btn ghost sm" data-a="contentRefresh">Tải lại nội dung từ cloud</button>' : ''}<button class="btn ghost sm" data-a="audioClear">Xóa file nghe tạm (tải từ cloud)</button></div>` : ''}
